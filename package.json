@@ -5,7 +5,9 @@
   "main": "./lib/index.js",
   "typings": "./lib/index.d.ts",
   "scripts": {
-    "build": "node_modules/.bin/tsc && node_modules/lib-builder/.bin/libuilder"
+    "tsc": "node_modules/.bin/tsc",
+    "bundle": "node_modules/.bin/libuilder",
+    "build": "npm run tsc && npm run bundle"
   },
   "dependencies": {
     "@types/vue": "^2.0.0"

@@ -15,7 +15,7 @@ export declare abstract class IProvider {
 export declare abstract class IConfig {
     abstract addService<TKey, TValue extends TKey>(key: {
         prototype: TKey;
-    }, value: (new (...arg) => TValue), options: {
+    }, value: (new (...arg: any[]) => TValue), options: {
         parameters: any[];
         registerable: boolean;
         initialize: (instance: TKey) => void;
@@ -24,7 +24,7 @@ export declare abstract class IConfig {
     abstract getService<TKey, TValue extends TKey>(key: {
         prototype: TKey;
     }): {
-        value: (new (...arg) => TValue);
+        value: (new (...arg: any[]) => TValue);
         parameters: any[];
         registerable: boolean;
         initialize: (instance: any) => void;
