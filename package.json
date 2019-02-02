@@ -1,0 +1,33 @@
+{
+  "name": "vue-extension-typescript",
+  "version": "0.0.1",
+  "description": "Extension for vuejs.",
+  "main": "./lib/index.js",
+  "typings": "./lib/index.d.ts",
+  "scripts": {
+    "build": "node_modules/.bin/tsc && node_modules/lib-builder/.bin/libuilder"
+  },
+  "dependencies": {
+    "@types/vue": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^7.0.14",
+    "jquery": "^3.3.1",
+    "lib-builder": "git+https://github.com/kleevskev/lib-builder.git",
+    "requirejs": "^2.3.6",
+    "typescript": "^3.3.1",
+    "vue": "^2.5.22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "(git@github.com:kleevs/lib-builder.git)"
+  },
+  "keywords": [
+    "lib",
+    "builder",
+    "lib-builder",
+    "bundle"
+  ],
+  "author": "kleevs",
+  "license": "MIT"
+}

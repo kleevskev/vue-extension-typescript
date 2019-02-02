@@ -1,0 +1,29 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "baseUrl": "src",
+    "experimentalDecorators": true,
+    "sourceMap": false,
+    "declaration": true,
+    "module": "umd",
+    "moduleResolution": "classic",
+    "emitDecoratorMetadata": true,
+    "target": "es6",
+    "typeRoots": [
+      "node_modules/@types",
+      "node_modules/vue/types"
+    ],
+    "lib": [
+      "es2016",
+      "dom"
+    ],
+    "outDir": "lib"
+  },
+  "include" : [ 
+    "./src/**/*.ts"
+  ],
+  "exclude" : [
+    "./node_modules",
+    "./lib"
+  ]
+}
