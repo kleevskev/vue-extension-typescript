@@ -14,8 +14,7 @@
   },
   "devDependencies": {
     "@types/node": "^7.0.14",
-    "jquery": "^3.3.1",
-    "lib-builder": "git+https://github.com/kleevskev/lib-builder.git",
+    "lib-builder": "0.0.1",
     "requirejs": "^2.3.6",
     "typescript": "^3.3.1",
     "vue": "^2.5.22"

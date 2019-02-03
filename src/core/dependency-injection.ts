@@ -82,6 +82,10 @@ class Provider extends IProvider {
     }
 
     getService<T>(key: Function & { prototype: T }): T {
+		if (<any>key == IProvider) {
+			return <any>this;
+		}
+		
         var result = this._register.filter((item) => item.key === key).map((item) => item.value)[0];
         var registerable = !result && this._config.getService(key).registerable;
         result = result || this.createService(key);
@@ -159,9 +163,8 @@ export class DependencyInjector {
     public getDecorator() {
         return <TKey, TValue extends TKey>(options: { 
 			key: { prototype: TKey }, 
-			registerable?: boolean, 
-			initialize?: (instance: TKey) => void,
-			test?: (serviceClass: any) => boolean
+			cachable?: boolean, 
+			initialize?: (instance: TKey) => void
 		}): (target: (new (...arg) => TValue)) => void => {
             var res: any = (target: (new (...arg) => TValue), metadata) => { 
                 this._config.addService(
@@ -169,9 +172,8 @@ export class DependencyInjector {
 					target, 
 					{ 
 						parameters: metadata && metadata["design:paramtypes"] || [],
-						registerable: options.registerable || options.registerable === undefined, 
-						initialize: options.initialize,
-						test: options.test
+						registerable: options.cachable || options.cachable === undefined, 
+						initialize: options.initialize
 					});
             };
             

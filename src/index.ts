@@ -3,7 +3,7 @@ export { View } from 'decorator/view';
 export { computed } from 'decorator/computed';
 export { methods } from 'decorator/methods';
 export { Directive } from 'decorator/directive';
-export { ServiceDecorator as Service } from 'core/dependency-injection';
+export { ServiceDecorator as Service, IProvider as IServiceProvider } from 'core/dependency-injection';
 
 import 'configuration';
 import 'directive/view.directive';
