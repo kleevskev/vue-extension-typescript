@@ -8,7 +8,7 @@ class Register implements IRegister {
         while(classTarget && classTarget.constructor !== classTarget) {
             ServiceDecorator({
                 key: classTarget,
-                registerable: false,
+                cachable: false,
                 initialize: initialize
             })(target);
             classTarget = Object.getPrototypeOf(classTarget);

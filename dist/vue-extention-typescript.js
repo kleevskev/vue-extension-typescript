@@ -145,6 +145,9 @@ __MODE__ = undefined;
 	            return instance;
 	        }
 	        getService(key) {
+	            if (key == IProvider) {
+	                return this;
+	            }
 	            var result = this._register.filter((item) => item.key === key).map((item) => item.value)[0];
 	            var registerable = !result && this._config.getService(key).registerable;
 	            result = result || this.createService(key);
@@ -193,9 +196,8 @@ __MODE__ = undefined;
 	                var res = (target, metadata) => {
 	                    this._config.addService(options.key, target, {
 	                        parameters: metadata && metadata["design:paramtypes"] || [],
-	                        registerable: options.registerable || options.registerable === undefined,
-	                        initialize: options.initialize,
-	                        test: options.test
+	                        registerable: options.cachable || options.cachable === undefined,
+	                        initialize: options.initialize
 	                    });
 	                };
 	                return res;
@@ -449,7 +451,7 @@ __MODE__ = undefined;
 	            while (classTarget && classTarget.constructor !== classTarget) {
 	                dependency_injection_1.ServiceDecorator({
 	                    key: classTarget,
-	                    registerable: false,
+	                    cachable: false,
 	                    initialize: initialize
 	                })(target);
 	                classTarget = Object.getPrototypeOf(classTarget);
@@ -530,6 +532,7 @@ __MODE__ = undefined;
 	    exports.Directive = directive_1.Directive;
 	    var dependency_injection_2 = require("core/dependency-injection");
 	    exports.Service = dependency_injection_2.ServiceDecorator;
+	    exports.IServiceProvider = dependency_injection_2.IProvider;
 	    require("configuration");
 	    require("directive/view.directive");
 	    function start(target, element) {

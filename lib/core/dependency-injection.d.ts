@@ -40,9 +40,8 @@ export declare class DependencyInjector {
         key: {
             prototype: TKey;
         };
-        registerable?: boolean;
+        cachable?: boolean;
         initialize?: (instance: TKey) => void;
-        test?: (serviceClass: any) => boolean;
     }) => (target: new (...arg: any[]) => TValue) => void;
 }
 export declare let config: IConfig;
@@ -51,7 +50,6 @@ export declare let ServiceDecorator: <TKey, TValue extends TKey>(options: {
     key: {
         prototype: TKey;
     };
-    registerable?: boolean;
+    cachable?: boolean;
     initialize?: (instance: TKey) => void;
-    test?: (serviceClass: any) => boolean;
 }) => (target: new (...arg: any[]) => TValue) => void;
