@@ -3,11 +3,17 @@ import { View, start, methods, computed } from '../../dist/vue-extention-typescr
 class Base {}
 
 @View({
-    html: "<div>message = {{ message }} et message2 = {{ message2 }} <input v-model='message'></div>"
+    html: "<div>sous vue</div>"
+})
+class SousVue {
+}
+
+@View({
+    html: "<div>message = {{ message }} et message2 = {{ message2 }} <input v-model='message'><div v-view='child'></div></div>"
 })
 class Test extends Base {
     message: string = "start";
-    constructor() {
+    constructor(private child: SousVue) {
         super();
     }
 

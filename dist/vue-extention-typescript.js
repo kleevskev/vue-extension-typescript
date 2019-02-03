@@ -377,14 +377,14 @@ __MODE__ = undefined;
 	    const view_1 = require("./view");
 	    const dependency_injection_1 = require("core/dependency-injection");
 	    function ViewService(options) {
-	        return (target) => {
+	        return (target, metadata) => {
 	            target = view_1.View(options)(target) || target;
 	            var classTarget = target;
 	            while (classTarget && classTarget.constructor !== classTarget) {
 	                dependency_injection_1.ServiceDecorator({
 	                    key: classTarget,
 	                    cachable: false
-	                })(target);
+	                })(target, metadata);
 	                classTarget = Object.getPrototypeOf(classTarget);
 	            }
 	            return target;

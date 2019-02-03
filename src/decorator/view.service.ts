@@ -4,14 +4,14 @@ import { ServiceDecorator } from 'core/dependency-injection';
 export function ViewService(options: {
     html: string | Promise<string>
 }) {
-    return <T>(target: new (...arg) => T) => { 
+    return <T>(target: new (...arg) => T, metadata?) => { 
         target = View(options)(target) || target;
         var classTarget = target;
         while(classTarget && classTarget.constructor !== classTarget) {
-            ServiceDecorator({
+            (<any>ServiceDecorator({
                 key: classTarget,
                 cachable: false
-            })(target);
+            }))(target, metadata);
             classTarget = Object.getPrototypeOf(classTarget);
         }
 
