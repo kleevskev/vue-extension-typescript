@@ -1,5 +1,5 @@
 import { serviceProvider } from 'core/dependency-injection';
-export { View } from 'decorator/view';
+export { ViewService as View } from 'decorator/view.service';
 export { computed } from 'decorator/computed';
 export { methods } from 'decorator/methods';
 export { Directive } from 'decorator/directive';

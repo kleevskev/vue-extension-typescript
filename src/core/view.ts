@@ -2,27 +2,21 @@ import { createElement, getAllFuncs, alreadyMap } from './tools';
 import { methods } from '../decorator/methods';
 
 declare let Vue;
-let _register: IRegister;
 
-export interface IRegister {
-    add<TInstance, TClass extends new (...arg) => TInstance>(target: TClass, initialize: (instance: TInstance)=>void) : void;
-}
-
-export let View = <T>(htmlPromise: Promise<string>, target: new (...arg) => T, options: any) => {
+export let View = <TClass extends new (...arg) => TInstance, TInstance>(htmlPromise: Promise<string>, target: TClass, options: any) : TClass => {
     var html = htmlPromise;
     var funcs = getAllFuncs(target.prototype);
     funcs.filter(name => !alreadyMap(options, name)).forEach(name => methods(target.prototype, name));
-    _register.add<T, new (...arg) => T>(target, (instance: T & { $vuejs }) => {
-        instance.$vuejs = html.then(template => new Vue(
-            Object.assign({}, options, {
+    var result = (new Function('target', `var ${target.name} = target(); return ${target.name};`))(() => {
+        return  function() {
+            var instance = target.apply(this, arguments) || this;
+            instance.$vuejs = html.then(template => new Vue(Object.assign({}, options, {
                 el: createElement(template),
                 data: instance
             })));
+        };
     });
-}
-
-export function config(options: {
-    register: IRegister
-}) {
-    _register = options.register;
+    
+    result.prototype = target.prototype;
+    return result;
 }

@@ -325,22 +325,22 @@ __MODE__ = undefined;
 	    Object.defineProperty(exports, "__esModule", { value: true });
 	    const tools_1 = require("./tools");
 	    const methods_1 = require("../decorator/methods");
-	    let _register;
 	    exports.View = (htmlPromise, target, options) => {
 	        var html = htmlPromise;
 	        var funcs = tools_1.getAllFuncs(target.prototype);
 	        funcs.filter(name => !tools_1.alreadyMap(options, name)).forEach(name => methods_1.methods(target.prototype, name));
-	        _register.add(target, (instance) => {
-	            instance.$vuejs = html.then(template => new Vue(Object.assign({}, options, {
-	                el: tools_1.createElement(template),
-	                data: instance
-	            })));
+	        var result = (new Function('target', `var ${target.name} = target(); return ${target.name};`))(() => {
+	            return function () {
+	                var instance = target.apply(this, arguments) || this;
+	                instance.$vuejs = html.then(template => new Vue(Object.assign({}, options, {
+	                    el: tools_1.createElement(template),
+	                    data: instance
+	                })));
+	            };
 	        });
+	        result.prototype = target.prototype;
+	        return result;
 	    };
-	    function config(options) {
-	        _register = options.register;
-	    }
-	    exports.config = config;
 	});
 	
 	(function (factory) {
@@ -361,6 +361,36 @@ __MODE__ = undefined;
 	        return (target) => view_1.View(html, target, option_1.getVueOptions(target));
 	    }
 	    exports.View = View;
+	});
+	
+	(function (factory) {
+	    if (typeof module === "object" && typeof module.exports === "object") {
+	        var v = factory(require, exports);
+	        if (v !== undefined) module.exports = v;
+	    }
+	    else if (typeof define === "function" && define.amd) {
+	        define('lib/decorator/view.service.js', ["require", "exports", "./view", "core/dependency-injection"], factory);
+	    }
+	})(function (require, exports) {
+	    "use strict";
+	    Object.defineProperty(exports, "__esModule", { value: true });
+	    const view_1 = require("./view");
+	    const dependency_injection_1 = require("core/dependency-injection");
+	    function ViewService(options) {
+	        return (target) => {
+	            target = view_1.View(options)(target) || target;
+	            var classTarget = target;
+	            while (classTarget && classTarget.constructor !== classTarget) {
+	                dependency_injection_1.ServiceDecorator({
+	                    key: classTarget,
+	                    cachable: false
+	                })(target);
+	                classTarget = Object.getPrototypeOf(classTarget);
+	            }
+	            return target;
+	        };
+	    }
+	    exports.ViewService = ViewService;
 	});
 	
 	(function (factory) {
@@ -437,35 +467,35 @@ __MODE__ = undefined;
 	        if (v !== undefined) module.exports = v;
 	    }
 	    else if (typeof define === "function" && define.amd) {
-	        define('lib/configuration.js', ["require", "exports", "core/view", "core/directive", "core/dependency-injection"], factory);
+	        define('lib/configuration.js', ["require", "exports", "core/directive", "core/dependency-injection"], factory);
 	    }
 	})(function (require, exports) {
 	    "use strict";
 	    Object.defineProperty(exports, "__esModule", { value: true });
-	    const view_1 = require("core/view");
+	    // import { IRegister, config as configViewRegister } from 'core/view';
 	    const directive_1 = require("core/directive");
 	    const dependency_injection_1 = require("core/dependency-injection");
-	    class Register {
-	        add(target, initialize) {
-	            var classTarget = target;
-	            while (classTarget && classTarget.constructor !== classTarget) {
-	                dependency_injection_1.ServiceDecorator({
-	                    key: classTarget,
-	                    cachable: false,
-	                    initialize: initialize
-	                })(target);
-	                classTarget = Object.getPrototypeOf(classTarget);
-	            }
-	        }
-	    }
+	    // class Register implements IRegister {
+	    //     add<TInstance, TClass extends new (...arg) => TInstance>(target: TClass, initialize: (instance: TInstance)=>void) {
+	    //         var classTarget = target;
+	    //         while(classTarget && classTarget.constructor !== classTarget) {
+	    //             ServiceDecorator({
+	    //                 key: classTarget,
+	    //                 cachable: false,
+	    //                 initialize: initialize
+	    //             })(target);
+	    //             classTarget = Object.getPrototypeOf(classTarget);
+	    //         }
+	    //     }
+	    // }
 	    class Factory {
 	        create(target) {
 	            return dependency_injection_1.serviceProvider.createService(target);
 	        }
 	    }
-	    view_1.config({
-	        register: new Register()
-	    });
+	    // configViewRegister({
+	    //     register: new Register()
+	    // });
 	    directive_1.config({
 	        factory: new Factory()
 	    });
@@ -516,14 +546,14 @@ __MODE__ = undefined;
 	        if (v !== undefined) module.exports = v;
 	    }
 	    else if (typeof define === "function" && define.amd) {
-	        define('lib/index.js', ["require", "exports", "core/dependency-injection", "decorator/view", "decorator/computed", "decorator/methods", "decorator/directive", "core/dependency-injection", "configuration", "directive/view.directive"], factory);
+	        define('lib/index.js', ["require", "exports", "core/dependency-injection", "decorator/view.service", "decorator/computed", "decorator/methods", "decorator/directive", "core/dependency-injection", "configuration", "directive/view.directive"], factory);
 	    }
 	})(function (require, exports) {
 	    "use strict";
 	    Object.defineProperty(exports, "__esModule", { value: true });
 	    const dependency_injection_1 = require("core/dependency-injection");
-	    var view_1 = require("decorator/view");
-	    exports.View = view_1.View;
+	    var view_service_1 = require("decorator/view.service");
+	    exports.View = view_service_1.ViewService;
 	    var computed_1 = require("decorator/computed");
 	    exports.computed = computed_1.computed;
 	    var methods_1 = require("decorator/methods");

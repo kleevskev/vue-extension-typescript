@@ -1,7 +1,1 @@
-export interface IRegister {
-    add<TInstance, TClass extends new (...arg: any[]) => TInstance>(target: TClass, initialize: (instance: TInstance) => void): void;
-}
-export declare let View: <T>(htmlPromise: Promise<string>, target: new (...arg: any[]) => T, options: any) => void;
-export declare function config(options: {
-    register: IRegister;
-}): void;
+export declare let View: <TClass extends new (...arg: any[]) => TInstance, TInstance>(htmlPromise: Promise<string>, target: TClass, options: any) => TClass;
