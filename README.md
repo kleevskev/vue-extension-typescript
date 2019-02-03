@@ -59,7 +59,7 @@ start(Test, document.getElementById("app"));
 import { View, Directive, start } from  'vue-extention-typescript';
 
 @Directive({ name: "colorblue" })
-ColorBlue {
+class ColorBlue {
 	bind(el) {
 		el.styles.color = "blue";
 	}
@@ -116,6 +116,29 @@ class  Test {
 
 start(Test, document.getElementById("app"));
 ```
+### Méthode
+```typescript
+import { View, methods, start } from  'vue-extention-typescript';
+
+@View({
+	html:  "<div>{{ hello }}, {{ whoiam() }}, {{ profession() }}</div>"
+})
+class  Test {
+	hello= "Hello world";
+
+	@methods
+	whoiam() {
+		return "I am Bob";
+	}
+	
+	profession() {
+		return "I am web developper";
+	}
+}
+
+start(Test, document.getElementById("app"));
+```
+
 ### Sous vue
 ```typescript
 import { View, start } from  'vue-extention-typescript';
