@@ -1,6 +1,6 @@
 {
   "name": "vue-extension-typescript",
-  "version": "0.0.2",
+  "version": "0.0.1",
   "description": "Extension for vuejs.",
   "main": "./lib/index.js",
   "typings": "./lib/index.d.ts",
@@ -21,13 +21,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "(git@github.com:kleevs/lib-builder.git)"
+    "url": "(git@github.com:kleevskev/vue-extension-typescript.git)"
   },
   "keywords": [
-    "lib",
-    "builder",
-    "lib-builder",
-    "bundle"
+    "vue",
+    "vuejs",
+    "typescript",
+    "class"
   ],
   "author": "kleevs",
   "license": "MIT"
