@@ -329,16 +329,16 @@ __MODE__ = undefined;
 	        var html = htmlPromise;
 	        var funcs = tools_1.getAllFuncs(target.prototype);
 	        funcs.filter(name => !tools_1.alreadyMap(options, name)).forEach(name => methods_1.methods(target.prototype, name));
-	        var result = (new Function('target', `var ${target.name} = target(); return ${target.name};`))(() => {
-	            return function () {
-	                var instance = target.apply(this, arguments) || this;
-	                instance.$vuejs = html.then(template => new Vue(Object.assign({}, options, {
-	                    el: tools_1.createElement(template),
-	                    data: instance
-	                })));
-	            };
+	        var result = (new Function('constructor', `return function ${target.name}() { constructor(this, arguments); };`))(function (instance, args) {
+	            var instance = target.apply(instance, args) || instance;
+	            instance.$vuejs = html.then(template => new Vue(Object.assign({}, options, {
+	                el: tools_1.createElement(template),
+	                data: instance
+	            })));
 	        });
-	        result.prototype = target.prototype;
+	        Object.setPrototypeOf(result, target);
+	        function __() { this.constructor = result; }
+	        result.prototype = target === null ? Object.create(target) : (__.prototype = target.prototype, new __());
 	        return result;
 	    };
 	});

@@ -7,16 +7,16 @@ export let View = <TClass extends new (...arg) => TInstance, TInstance>(htmlProm
     var html = htmlPromise;
     var funcs = getAllFuncs(target.prototype);
     funcs.filter(name => !alreadyMap(options, name)).forEach(name => methods(target.prototype, name));
-    var result = (new Function('target', `var ${target.name} = target(); return ${target.name};`))(() => {
-        return  function() {
-            var instance = target.apply(this, arguments) || this;
+    var result = (new Function('constructor', `return function ${target.name}() { constructor(this, arguments); };`))(
+        function (instance, args) {
+            var instance = target.apply(instance, args) || instance;
             instance.$vuejs = html.then(template => new Vue(Object.assign({}, options, {
                 el: createElement(template),
                 data: instance
             })));
-        };
-    });
-    
-    result.prototype = target.prototype;
+        });
+    Object.setPrototypeOf(result, target);
+    function __() { this.constructor = result; }
+    result.prototype = target === null ? Object.create(target) : (__.prototype = target.prototype, new __());
     return result;
 }

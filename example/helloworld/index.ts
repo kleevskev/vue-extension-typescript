@@ -23,4 +23,4 @@ class Test extends Base {
     }
 }
 
-start(Test, document.getElementById("app"));
+start(Base, document.getElementById("app"));
