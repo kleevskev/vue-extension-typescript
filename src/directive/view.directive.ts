@@ -1,5 +1,4 @@
 import { Directive } from '../decorator/directive'
-import '../configuration';
 
 @Directive({ name: "view" })
 class ViewDirective {

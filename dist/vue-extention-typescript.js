@@ -425,9 +425,7 @@ __MODE__ = undefined;
 	})(function (require, exports) {
 	    "use strict";
 	    Object.defineProperty(exports, "__esModule", { value: true });
-	    let _factory;
-	    exports.Directive = (name, target) => {
-	        var instance = _factory.create(target);
+	    exports.Directive = (name, instance) => {
 	        Vue.directive(name, {
 	            bind: instance.bind && instance.bind.bind(instance),
 	            inserted: instance.inserted && instance.inserted.bind(instance),
@@ -436,10 +434,6 @@ __MODE__ = undefined;
 	            unbind: instance.unbind && instance.unbind.bind(instance)
 	        });
 	    };
-	    function config(options) {
-	        _factory = options.factory;
-	    }
-	    exports.config = config;
 	});
 	
 	(function (factory) {
@@ -448,57 +442,28 @@ __MODE__ = undefined;
 	        if (v !== undefined) module.exports = v;
 	    }
 	    else if (typeof define === "function" && define.amd) {
-	        define('lib/decorator/directive.js', ["require", "exports", "core/directive"], factory);
+	        define('lib/decorator/directive.js', ["require", "exports", "core/directive", "core/dependency-injection"], factory);
 	    }
 	})(function (require, exports) {
 	    "use strict";
 	    Object.defineProperty(exports, "__esModule", { value: true });
-	    const directive_1 = require("core/directive");
-	    function Directive(options) {
-	        var name = options.name;
-	        return (target) => directive_1.Directive(name, target);
-	    }
-	    exports.Directive = Directive;
-	});
-	
-	(function (factory) {
-	    if (typeof module === "object" && typeof module.exports === "object") {
-	        var v = factory(require, exports);
-	        if (v !== undefined) module.exports = v;
-	    }
-	    else if (typeof define === "function" && define.amd) {
-	        define('lib/configuration.js', ["require", "exports", "core/directive", "core/dependency-injection"], factory);
-	    }
-	})(function (require, exports) {
-	    "use strict";
-	    Object.defineProperty(exports, "__esModule", { value: true });
-	    // import { IRegister, config as configViewRegister } from 'core/view';
 	    const directive_1 = require("core/directive");
 	    const dependency_injection_1 = require("core/dependency-injection");
-	    // class Register implements IRegister {
-	    //     add<TInstance, TClass extends new (...arg) => TInstance>(target: TClass, initialize: (instance: TInstance)=>void) {
-	    //         var classTarget = target;
-	    //         while(classTarget && classTarget.constructor !== classTarget) {
-	    //             ServiceDecorator({
-	    //                 key: classTarget,
-	    //                 cachable: false,
-	    //                 initialize: initialize
-	    //             })(target);
-	    //             classTarget = Object.getPrototypeOf(classTarget);
-	    //         }
-	    //     }
-	    // }
-	    class Factory {
-	        create(target) {
-	            return dependency_injection_1.serviceProvider.createService(target);
-	        }
+	    function Directive(options) {
+	        var name = options.name;
+	        return (target, metadata) => {
+	            var classTarget = target;
+	            while (classTarget && classTarget.constructor !== classTarget) {
+	                dependency_injection_1.ServiceDecorator({
+	                    key: classTarget,
+	                    cachable: false
+	                })(target, metadata);
+	                classTarget = Object.getPrototypeOf(classTarget);
+	            }
+	            directive_1.Directive(name, dependency_injection_1.serviceProvider.getService(target));
+	        };
 	    }
-	    // configViewRegister({
-	    //     register: new Register()
-	    // });
-	    directive_1.config({
-	        factory: new Factory()
-	    });
+	    exports.Directive = Directive;
 	});
 	
 	var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
@@ -513,13 +478,12 @@ __MODE__ = undefined;
 	        if (v !== undefined) module.exports = v;
 	    }
 	    else if (typeof define === "function" && define.amd) {
-	        define('lib/directive/view.directive.js', ["require", "exports", "../decorator/directive", "../configuration"], factory);
+	        define('lib/directive/view.directive.js', ["require", "exports", "../decorator/directive"], factory);
 	    }
 	})(function (require, exports) {
 	    "use strict";
 	    Object.defineProperty(exports, "__esModule", { value: true });
 	    const directive_1 = require("../decorator/directive");
-	    require("../configuration");
 	    let ViewDirective = class ViewDirective {
 	        bind(el, binding, vnode) {
 	            this.update(el, binding, vnode);
@@ -546,7 +510,7 @@ __MODE__ = undefined;
 	        if (v !== undefined) module.exports = v;
 	    }
 	    else if (typeof define === "function" && define.amd) {
-	        define('lib/index.js', ["require", "exports", "core/dependency-injection", "decorator/view.service", "decorator/computed", "decorator/methods", "decorator/directive", "core/dependency-injection", "configuration", "directive/view.directive"], factory);
+	        define('lib/index.js', ["require", "exports", "core/dependency-injection", "decorator/view.service", "decorator/computed", "decorator/methods", "decorator/directive", "core/dependency-injection", "directive/view.directive"], factory);
 	    }
 	})(function (require, exports) {
 	    "use strict";
@@ -563,7 +527,6 @@ __MODE__ = undefined;
 	    var dependency_injection_2 = require("core/dependency-injection");
 	    exports.Service = dependency_injection_2.ServiceDecorator;
 	    exports.IServiceProvider = dependency_injection_2.IProvider;
-	    require("configuration");
 	    require("directive/view.directive");
 	    function start(target, element) {
 	        dependency_injection_1.serviceProvider.createService(target).$vuejs.then(_ => element.appendChild(_.$el));

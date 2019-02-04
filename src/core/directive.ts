@@ -1,13 +1,6 @@
 declare let Vue;
 
-let _factory: IFactory;
-
-export interface IFactory {
-    create<TInstance, TClass extends new (...arg) => TInstance>(target: TClass) : TInstance;
-}
-
-export let Directive = <T>(name: string, target: new (...arg) => T) => {
-    var instance = _factory.create<any,any>(target);
+export let Directive = (name: string, instance: any) => {
     Vue.directive(name, {
         bind: instance.bind && instance.bind.bind(instance),
         inserted: instance.inserted && instance.inserted.bind(instance),
@@ -15,10 +8,4 @@ export let Directive = <T>(name: string, target: new (...arg) => T) => {
         componentUpdated: instance.componentUpdated && instance.componentUpdated.bind(instance),
         unbind: instance.unbind && instance.unbind.bind(instance)
     });
-}
-
-export function config(options: {
-    factory: IFactory
-}) {
-    _factory = options.factory;
 }

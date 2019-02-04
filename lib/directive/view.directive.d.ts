@@ -1,1 +1,1 @@
-import '../configuration';
+export {};

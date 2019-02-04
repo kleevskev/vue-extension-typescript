@@ -1,3 +1,3 @@
 export declare function Directive<T>(options: {
     name: string;
-}): <T_1>(target: new (...arg: any[]) => T_1) => void;
+}): <T_1>(target: new (...arg: any[]) => T_1, metadata?: any) => void;
