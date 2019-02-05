@@ -1,6 +1,6 @@
 module.exports = {
     "main": "lib/index.js",
-    "out": "dist/vue-extention-typescript.js",
+    "out": "dist/vue-extension-typescript.js",
     "decorator": true,
     "config": { 
         "name": "VueTs",

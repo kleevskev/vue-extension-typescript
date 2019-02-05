@@ -6,7 +6,11 @@ declare let Vue;
 export let View = <TClass extends new (...arg) => TInstance, TInstance>(htmlPromise: Promise<string>, target: TClass, options: any) : TClass => {
     var html = htmlPromise;
     var funcs = getAllFuncs(target.prototype);
-    funcs.filter(name => !alreadyMap(options, name)).forEach(name => methods(target.prototype, name));
+    funcs.filter(name => !alreadyMap(options, name)).forEach(name => {
+		options.methods[name] = function () {
+            return this.$data[name].apply(this.$data, arguments);
+        }
+	});
     var result = (new Function('constructor', `return function ${target.name}() { constructor(this, arguments); };`))(
         function (instance, args) {
             var instance = target.apply(instance, args) || instance;
