@@ -14,6 +14,10 @@ class ViewDirective {
                 }
                 el.appendChild(_.$el);
             });
-        }
+        } else {
+			while (el.firstChild) {
+				el.removeChild(el.firstChild);
+			}
+		}
     }
 }

@@ -502,6 +502,11 @@ __MODE__ = undefined;
 	                    el.appendChild(_.$el);
 	                });
 	            }
+	            else {
+	                while (el.firstChild) {
+	                    el.removeChild(el.firstChild);
+	                }
+	            }
 	        }
 	    };
 	    ViewDirective = __decorate([
