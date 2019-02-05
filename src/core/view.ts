@@ -4,6 +4,8 @@ import { methods } from '../decorator/methods';
 declare let Vue;
 
 export let View = <TClass extends new (...arg) => TInstance, TInstance>(htmlPromise: Promise<string>, target: TClass, options: any) : TClass => {
+	options = options || {};
+	options.methods = options.methods || {};
     var html = htmlPromise;
     var funcs = getAllFuncs(target.prototype);
     funcs.filter(name => !alreadyMap(options, name)).forEach(name => {
