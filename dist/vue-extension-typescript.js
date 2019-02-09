@@ -383,6 +383,90 @@ __MODE__ = undefined;
 	        if (v !== undefined) module.exports = v;
 	    }
 	    else if (typeof define === "function" && define.amd) {
+	        define('lib/core/component.js', ["require", "exports", "./tools"], factory);
+	    }
+	})(function (require, exports) {
+	    "use strict";
+	    Object.defineProperty(exports, "__esModule", { value: true });
+	    const tools_1 = require("./tools");
+	    exports.Component = (name, htmlPromise, target, options) => {
+	        options = options || {};
+	        options.methods = options.methods || {};
+	        var html = htmlPromise;
+	        var funcs = tools_1.getAllFuncs(target.prototype);
+	        funcs.filter(name => !tools_1.alreadyMap(options, name)).forEach(name => {
+	            options.methods[name] = function () {
+	                return this.$data[name].apply(this.$data, arguments);
+	            };
+	        });
+	        Vue.component(`vc-${name}`, (resolve, reject) => html
+	            .then(template => resolve(Object.assign({}, options, { template: template })))
+	            .catch(_ => reject(_)));
+	        return target;
+	    };
+	});
+	
+	(function (factory) {
+	    if (typeof module === "object" && typeof module.exports === "object") {
+	        var v = factory(require, exports);
+	        if (v !== undefined) module.exports = v;
+	    }
+	    else if (typeof define === "function" && define.amd) {
+	        define('lib/decorator/component.js', ["require", "exports", "core/component", "core/option"], factory);
+	    }
+	})(function (require, exports) {
+	    "use strict";
+	    Object.defineProperty(exports, "__esModule", { value: true });
+	    const component_1 = require("core/component");
+	    const option_1 = require("core/option");
+	    function Component(options) {
+	        var html = options.html && (options.html.then && options.html || Promise.resolve(options.html));
+	        var provider = options.provider;
+	        return (target) => target = component_1.Component(options.name, html, target, Object.assign({}, option_1.getVueOptions(target), {
+	            data: () => provider && provider(target) || new target()
+	        })) || target;
+	    }
+	    exports.Component = Component;
+	});
+	
+	(function (factory) {
+	    if (typeof module === "object" && typeof module.exports === "object") {
+	        var v = factory(require, exports);
+	        if (v !== undefined) module.exports = v;
+	    }
+	    else if (typeof define === "function" && define.amd) {
+	        define('lib/decorator/component.service.js', ["require", "exports", "./component", "core/dependency-injection"], factory);
+	    }
+	})(function (require, exports) {
+	    "use strict";
+	    Object.defineProperty(exports, "__esModule", { value: true });
+	    const component_1 = require("./component");
+	    const dependency_injection_1 = require("core/dependency-injection");
+	    function ComponentService(options) {
+	        return (target, metadata) => {
+	            target = component_1.Component(Object.assign({}, options, {
+	                provider: (t) => dependency_injection_1.serviceProvider.createService(t)
+	            }))(target) || target;
+	            var classTarget = target;
+	            while (classTarget && classTarget.constructor !== classTarget) {
+	                dependency_injection_1.ServiceDecorator({
+	                    key: classTarget,
+	                    cachable: false
+	                })(target, metadata);
+	                classTarget = Object.getPrototypeOf(classTarget);
+	            }
+	            return target;
+	        };
+	    }
+	    exports.ComponentService = ComponentService;
+	});
+	
+	(function (factory) {
+	    if (typeof module === "object" && typeof module.exports === "object") {
+	        var v = factory(require, exports);
+	        if (v !== undefined) module.exports = v;
+	    }
+	    else if (typeof define === "function" && define.amd) {
 	        define('lib/decorator/computed.js', ["require", "exports", "core/option"], factory);
 	    }
 	})(function (require, exports) {
@@ -520,7 +604,7 @@ __MODE__ = undefined;
 	        if (v !== undefined) module.exports = v;
 	    }
 	    else if (typeof define === "function" && define.amd) {
-	        define('lib/index.js', ["require", "exports", "core/dependency-injection", "decorator/view.service", "decorator/computed", "decorator/methods", "decorator/directive", "core/dependency-injection", "directive/view.directive"], factory);
+	        define('lib/index.js', ["require", "exports", "core/dependency-injection", "decorator/view.service", "decorator/component.service", "decorator/computed", "decorator/methods", "decorator/directive", "core/dependency-injection", "directive/view.directive"], factory);
 	    }
 	})(function (require, exports) {
 	    "use strict";
@@ -528,6 +612,8 @@ __MODE__ = undefined;
 	    const dependency_injection_1 = require("core/dependency-injection");
 	    var view_service_1 = require("decorator/view.service");
 	    exports.View = view_service_1.ViewService;
+	    var component_service_1 = require("decorator/component.service");
+	    exports.Component = component_service_1.ComponentService;
 	    var computed_1 = require("decorator/computed");
 	    exports.computed = computed_1.computed;
 	    var methods_1 = require("decorator/methods");

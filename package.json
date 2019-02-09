@@ -1,6 +1,6 @@
 {
   "name": "vue-extension-typescript",
-  "version": "0.0.1-beta.7",
+  "version": "0.0.1-beta.10",
   "description": "Extension for vuejs.",
   "main": "./lib/index.js",
   "typings": "./lib/index.d.ts",
@@ -8,9 +8,6 @@
     "tsc": "node_modules/.bin/tsc",
     "bundle": "node_modules/.bin/libuilder",
     "build": "npm run tsc && npm run bundle"
-  },
-  "dependencies": {
-    "@types/vue": "^2.0.0"
   },
   "devDependencies": {
     "@types/node": "^7.0.14",
