@@ -1,5 +1,4 @@
 import { createElement, getAllFuncs, alreadyMap } from './tools';
-import { methods } from '../decorator/methods';
 
 declare let Vue;
 
@@ -20,6 +19,7 @@ export let View = <TClass extends new (...arg) => TInstance, TInstance>(htmlProm
                 el: createElement(template),
                 data: instance
             })));
+            instance.$vuejs.then(_ => options.initAfter && options.initAfter.forEach(fn => fn(_)));
         });
     Object.setPrototypeOf(result, target);
     function __() { this.constructor = result; }

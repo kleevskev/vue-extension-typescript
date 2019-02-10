@@ -108,7 +108,7 @@ __MODE__ = undefined;
 	        var r = key === undefined ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, metadata = {}, d;
 	        for (var i = decorators.length - 1; i >= 0; i--) {
 	            if (d = decorators[i]) {
-	                r = (!key ? d(r, metadata) : !desc ? d(target, key, r, metadata) : d(target, key, metadata)) || r;
+	                r = (!key ? d(r, metadata) : desc ? d(target, key, r, metadata) : d(target, key, metadata)) || r;
 	            }
 	        }
 	        return r;
@@ -261,6 +261,42 @@ __MODE__ = undefined;
 	        return false;
 	    }
 	    exports.alreadyMap = alreadyMap;
+	    function deepCopy(object) {
+	        if (object instanceof Array || (typeof (object)).trim().toLowerCase() === "object") {
+	            var result = object instanceof Array && [] || {};
+	            for (var i in object) {
+	                result[i] = deepCopy(object[i]);
+	            }
+	            return result;
+	        }
+	        else {
+	            return object;
+	        }
+	    }
+	    exports.deepCopy = deepCopy;
+	    function dm(target, source) {
+	        if (target instanceof Array || (typeof (target)).trim().toLowerCase() === "object") {
+	            var result = target;
+	            for (var i in source) {
+	                if (source[i] !== undefined || source[i] !== null) {
+	                    if (target instanceof Array) {
+	                        result.push(deepCopy(source[i]));
+	                    }
+	                    else {
+	                        result[i] = dm(target[i], source[i]);
+	                    }
+	                }
+	            }
+	            return result;
+	        }
+	        else {
+	            return source || target;
+	        }
+	    }
+	    function deepMerge(target, source) {
+	        return dm(deepCopy(target), source);
+	    }
+	    exports.deepMerge = deepMerge;
 	});
 	
 	(function (factory) {
@@ -291,6 +327,7 @@ __MODE__ = undefined;
 	                el: tools_1.createElement(template),
 	                data: instance
 	            })));
+	            instance.$vuejs.then(_ => options.initAfter && options.initAfter.forEach(fn => fn(_)));
 	        });
 	        Object.setPrototypeOf(result, target);
 	        function __() { this.constructor = result; }
@@ -305,23 +342,24 @@ __MODE__ = undefined;
 	        if (v !== undefined) module.exports = v;
 	    }
 	    else if (typeof define === "function" && define.amd) {
-	        define('lib/core/option.js', ["require", "exports"], factory);
+	        define('lib/core/option.js', ["require", "exports", "./tools"], factory);
 	    }
 	})(function (require, exports) {
 	    "use strict";
 	    Object.defineProperty(exports, "__esModule", { value: true });
+	    const tools_1 = require("./tools");
 	    let options = [];
 	    function getVueOptions(target) {
 	        return options.filter(_ => _.target === target.prototype).map(_ => _.value)[0];
 	    }
 	    exports.getVueOptions = getVueOptions;
-	    function setVueOptions(target, name, callback) {
+	    function setVueOptions(target, callback) {
 	        if (options.filter(_ => _.target === target)[0] == undefined) {
 	            options.push({ target: target, value: {} });
 	        }
-	        options.filter(_ => _.target === target).map(_ => _.value).forEach(option => {
-	            option[name] = option[name] || {};
-	            option[name] = callback(option[name]) || option[name];
+	        options.filter(_ => _.target === target).forEach(option => {
+	            var opt = callback();
+	            option.value = opt && tools_1.deepMerge(option.value, opt) || option.value;
 	        });
 	    }
 	    exports.setVueOptions = setVueOptions;
@@ -400,7 +438,15 @@ __MODE__ = undefined;
 	            };
 	        });
 	        Vue.component(`vc-${name}`, (resolve, reject) => html
-	            .then(template => resolve(Object.assign({}, options, { template: template })))
+	            .then(template => resolve(Object.assign({}, options, {
+	            template: template,
+	            data: function () {
+	                var data = options.data();
+	                data.$vuejs = Promise.resolve(this);
+	                data.$vuejs.then(_ => options.initAfter && options.initAfter.forEach(fn => fn(_)));
+	                return data;
+	            }
+	        })))
 	            .catch(_ => reject(_)));
 	        return target;
 	    };
@@ -474,10 +520,14 @@ __MODE__ = undefined;
 	    Object.defineProperty(exports, "__esModule", { value: true });
 	    const option_1 = require("core/option");
 	    exports.computed = (target, propertyKey) => {
-	        return option_1.setVueOptions(target, "computed", (computed) => {
-	            computed[propertyKey] = function () {
-	                return this.$data[propertyKey].apply(this.$data, arguments);
+	        return option_1.setVueOptions(target, () => {
+	            var options = {
+	                computed: {}
 	            };
+	            options.computed[propertyKey] = function () {
+	                return this._data[propertyKey].apply(this._data, arguments);
+	            };
+	            return options;
 	        });
 	    };
 	});
@@ -495,9 +545,67 @@ __MODE__ = undefined;
 	    Object.defineProperty(exports, "__esModule", { value: true });
 	    const option_1 = require("core/option");
 	    exports.methods = (target, propertyKey) => {
-	        option_1.setVueOptions(target, "methods", (method) => {
-	            method[propertyKey] = function () {
-	                return this.$data[propertyKey].apply(this.$data, arguments);
+	        option_1.setVueOptions(target, () => {
+	            var options = {
+	                methods: {}
+	            };
+	            options.methods[propertyKey] = function () {
+	                return this._data[propertyKey].apply(this._data, arguments);
+	            };
+	            return options;
+	        });
+	    };
+	});
+	
+	(function (factory) {
+	    if (typeof module === "object" && typeof module.exports === "object") {
+	        var v = factory(require, exports);
+	        if (v !== undefined) module.exports = v;
+	    }
+	    else if (typeof define === "function" && define.amd) {
+	        define('lib/decorator/prop.js', ["require", "exports", "core/option"], factory);
+	    }
+	})(function (require, exports) {
+	    "use strict";
+	    Object.defineProperty(exports, "__esModule", { value: true });
+	    const option_1 = require("core/option");
+	    exports.props = (options) => (target, propertyKey) => {
+	        option_1.setVueOptions(target, () => {
+	            var option = {
+	                props: [options.name],
+	                watch: {},
+	                initAfter: [($vuejs) => {
+	                        $vuejs._data[propertyKey] = $vuejs[options.name] !== undefined && $vuejs[options.name] || $vuejs._data[propertyKey];
+	                    }]
+	            };
+	            option.watch[options.name] = function (value, oldValue) {
+	                this._data[propertyKey] = value;
+	            };
+	            return option;
+	        });
+	    };
+	});
+	
+	(function (factory) {
+	    if (typeof module === "object" && typeof module.exports === "object") {
+	        var v = factory(require, exports);
+	        if (v !== undefined) module.exports = v;
+	    }
+	    else if (typeof define === "function" && define.amd) {
+	        define('lib/decorator/event.js', ["require", "exports", "core/option"], factory);
+	    }
+	})(function (require, exports) {
+	    "use strict";
+	    Object.defineProperty(exports, "__esModule", { value: true });
+	    const option_1 = require("core/option");
+	    exports.event = (options) => (target, propertyKey, descriptor) => {
+	        var eventType = options.name;
+	        option_1.setVueOptions(target, () => {
+	            var base = descriptor.value;
+	            descriptor.value = function () {
+	                var result = base.apply(this, arguments);
+	                this.$vuejs.then(vuejs => vuejs.$emit(eventType, result));
+	                return result;
 	            };
 	        });
 	    };
@@ -604,7 +712,7 @@ __MODE__ = undefined;
 	        if (v !== undefined) module.exports = v;
 	    }
 	    else if (typeof define === "function" && define.amd) {
-	        define('lib/index.js', ["require", "exports", "core/dependency-injection", "decorator/view.service", "decorator/component.service", "decorator/computed", "decorator/methods", "decorator/directive", "core/dependency-injection", "directive/view.directive"], factory);
+	        define('lib/index.js', ["require", "exports", "core/dependency-injection", "decorator/view.service", "decorator/component.service", "decorator/computed", "decorator/methods", "decorator/prop", "decorator/event", "decorator/directive", "core/dependency-injection", "directive/view.directive"], factory);
 	    }
 	})(function (require, exports) {
 	    "use strict";
@@ -618,6 +726,10 @@ __MODE__ = undefined;
 	    exports.computed = computed_1.computed;
 	    var methods_1 = require("decorator/methods");
 	    exports.methods = methods_1.methods;
+	    var prop_1 = require("decorator/prop");
+	    exports.props = prop_1.props;
+	    var event_1 = require("decorator/event");
+	    exports.event = event_1.event;
 	    var directive_1 = require("decorator/directive");
 	    exports.Directive = directive_1.Directive;
 	    var dependency_injection_2 = require("core/dependency-injection");

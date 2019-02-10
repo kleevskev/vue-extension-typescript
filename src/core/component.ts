@@ -16,7 +16,15 @@ export let Component = <TClass extends new (...arg) => TInstance, TInstance>(nam
     
     Vue.component(`vc-${name}`, (resolve, reject) => 
         html
-        .then(template => resolve(Object.assign({}, options, { template: template })))
+        .then(template => resolve(Object.assign({}, options, { 
+            template: template,
+            data: function () {
+                var data = options.data();
+                data.$vuejs = Promise.resolve(this);
+                 data.$vuejs.then(_ => options.initAfter && options.initAfter.forEach(fn => fn(_)));
+                 return data;
+            } 
+        })))
         .catch(_ => reject(_))
     );
 

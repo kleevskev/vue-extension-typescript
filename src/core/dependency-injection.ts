@@ -14,7 +14,7 @@ context.Reflect.decorate = (decorators, target, key, desc) => {
 
     for (var i = decorators.length - 1; i >= 0; i--) {
         if (d = decorators[i]) {
-            r = (!key ? d(r, metadata) : !desc ? d(target, key, r, metadata) : d(target, key, metadata)) || r;
+            r = (!key ? d(r, metadata) : desc ? d(target, key, r, metadata) : d(target, key, metadata)) || r;
         }
     }
 

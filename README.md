@@ -36,6 +36,12 @@ Permet de définir un propriété d'une classe comme étant un champ calculé au
 ### @methods
 Permet de définir un propriété d'une classe comme étant une méthode au sens de **vuejs**. Toutes les méthodes d'une classe décorées avec **@View** sont par défaut des méthodes.
 
+### @props
+Permet de définir un propriété d'une classe comme étant une propriété au sens de **vuejs**.
+
+### @event
+Permet de définir une méthode d'une classe comme étant un lanceur d'évènement. Chaque fois que cette méthode sera appelée un évènement sera lancé avec pour valeur la valeur de retour de la méthode.
+
 ### function  start(target: Function, element: Element)
 La méthode start est le point d'entrée de l'application.
 

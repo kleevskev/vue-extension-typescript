@@ -38,3 +38,38 @@ export function alreadyMap(option: any, propName: string) : boolean {
 
     return false;
 }
+
+export function deepCopy<T>(object: T): T {
+	if (object instanceof Array || (<string>typeof(object)).trim().toLowerCase() === "object") {
+		var result: any = object instanceof Array && [] || {};
+		for(var i in object) {
+			result[i] = deepCopy(object[i]);
+		}
+		return result;
+	} else {
+		return object;
+	}
+}
+
+function dm<T1, T2>(target, source) {
+	if (target instanceof Array || (<string>typeof(target)).trim().toLowerCase() === "object") {
+		var result = target;
+		for (var i in source) {
+			if (source[i] !== undefined || source[i] !== null) {
+				if (target instanceof Array) {
+					result.push(deepCopy(source[i]));
+				} else {
+					result[i] = dm(target[i], source[i]);
+				}
+			}
+		}
+
+		return result;
+	} else {
+		return source || target;
+	}
+}
+
+export function deepMerge<T1, T2>(target, source) {
+	return dm(deepCopy(target), source);
+}
