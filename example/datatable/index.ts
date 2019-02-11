@@ -44,14 +44,12 @@ class Datatable {
 
     update(el, binding) {
         $(el).DataTable({
-            "drawCallback": function( settings ) {
-                settings.aoData.filter(_ => !_.isVueMapped).forEach(_ => {
-                    _.isVueMapped = true;
-                    _.nTr = new Vue({
-                        el: _.nTr,
-                        data: _._aData
-                    }).$el;
-                });
+            "createdRow": function( row, data, dataIndex ) {
+                var tr = this.fnSettings().aoData[dataIndex].nTr;
+                this.fnSettings().aoData[dataIndex].nTr = new Vue({
+                    el: tr,
+                    data: data
+                }).$el;
             }
         });
         var table = $(el).DataTable();
