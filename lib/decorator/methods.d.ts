@@ -1,1 +1,2 @@
-export declare let methods: <T>(target: any, propertyKey: string) => void;
+export declare function methods<T>(target: any): any;
+export declare function methods<T>(target: any, propertyKey: string): any;

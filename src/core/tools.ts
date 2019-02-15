@@ -73,3 +73,14 @@ function dm<T1, T2>(target, source) {
 export function deepMerge<T1, T2>(target, source) {
 	return dm(deepCopy(target), source);
 }
+
+export function getComputedFromData(obj) {
+	var computed = {};
+	Object.getOwnPropertyNames(obj).forEach((key) => {
+		computed[key] = {
+			get: function () { return this._data.instance_extension_vuejs[key]; },
+			set: function (v) { return this._data.instance_extension_vuejs[key] = v; }
+		}
+	});
+	return computed;
+}

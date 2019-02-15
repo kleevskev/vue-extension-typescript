@@ -1,3 +1,4 @@
-export declare let props: (options: {
+export declare function props<T>(target: {
     name: string;
-}) => <T>(target: any, propertyKey: string) => void;
+}): any;
+export declare function props<T>(target: any, propertyKey: string): any;

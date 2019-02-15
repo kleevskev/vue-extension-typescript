@@ -2,29 +2,33 @@ import { View, Directive, Component, start, methods, computed, props, event } fr
 declare let Vue: any;
 
 // Vue.directive("test", {
-//     bind: (el, binding) => {
-//         console.log("first " + binding.value);
-//     },
+    // bind: (el, binding) => {
+        // console.log("first " + binding.value);
+    // },
 
-//     update: (el, binding) => {
-//         console.log(binding.value);
-//     }
+    // update: (el, binding) => {
+        // console.log(binding.value);
+    // }
 // });
 
-// new Vue({
-//     el: "#app",
-//     data: {
-//         message: "start",
-//         result: "resultat"
-//     },
-//     template: `
-//         <div>
-//             <div>message = {{ message }}</div>
-//             <div v-test="result" >message = {{ result }}</div>
-//             <input v-model='message'>
-//         </div>
-//         `
+// var instance = new Vue({
+    // el: "#app",
+    // data: { instance_extension_vuejs: data },
+	// computed: Object.assign({}, vueData, {
+		// calcule: {
+			// get: function() { return `(${this._data.instance_extension_vuejs.message})`; }
+		// }
+	// }),
+    // template: `
+        // <div>
+            // <div>message = {{ message }}</div>
+			// <div>message = {{ calcule }}</div>
+            // <div v-test="result" >message = {{ result }}</div>
+            // <input v-model='message'>
+        // </div>
+        // `
 // });
+
 @Directive({ name: "test" })
 class Dir {
     bind(el, binding) {
@@ -38,30 +42,34 @@ class Dir {
 
 @Component({ 
     name: "test", 
-    html: `<div>composant</div>`
+    html: `<div>composant {{data}} {{label}}</div>`
 })
 class Comp {
-    @props({ name: "value" })
-    prop = 'test';
+    @props
+    data = 'test';
 
-    @props({ name: "autre" })
-    test = 'test';
+	@props
+	label = "titre";
+	
+    @props({ name: "value" })
+    test = 'test autre';
 }
 
 @View({
     html: `
     <div>
         <div>message = {{ message }}</div>
-        <div>message = {{ calcule }}</div>
-        <div v-test="result" >message = {{ result }}</div>
+        <div>calcule = {{ calcule }}</div>
+        <div v-test="result" >result = {{ result }}</div>
         <input v-model='message'>
-        <vc-test></vc-test>
+        <vc-test :data="calcule" :label="result"></vc-test>
     </div>
     `
 })
 class Test {
     message: string = "start";
     result = "resultat";
+	
     constructor() {
     }
 

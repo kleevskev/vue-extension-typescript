@@ -297,6 +297,17 @@ __MODE__ = undefined;
 	        return dm(deepCopy(target), source);
 	    }
 	    exports.deepMerge = deepMerge;
+	    function getComputedFromData(obj) {
+	        var computed = {};
+	        Object.getOwnPropertyNames(obj).forEach((key) => {
+	            computed[key] = {
+	                get: function () { return this._data.instance_extension_vuejs[key]; },
+	                set: function (v) { return this._data.instance_extension_vuejs[key] = v; }
+	            };
+	        });
+	        return computed;
+	    }
+	    exports.getComputedFromData = getComputedFromData;
 	});
 	
 	(function (factory) {
@@ -318,14 +329,17 @@ __MODE__ = undefined;
 	        var funcs = tools_1.getAllFuncs(target.prototype);
 	        funcs.filter(name => !tools_1.alreadyMap(options, name)).forEach(name => {
 	            options.methods[name] = function () {
-	                return this.$data[name].apply(this.$data, arguments);
+	                return this.$data[name].apply(this._data.instance_extension_vuejs, arguments);
 	            };
 	        });
 	        var result = (new Function('constructor', `return function ${target.name}() { constructor(this, arguments); };`))(function (instance, args) {
 	            var instance = target.apply(instance, args) || instance;
+	            var computed = tools_1.getComputedFromData(instance);
+	            options.computed = options.computed || {};
+	            options.computed = Object.assign({}, computed, options.computed);
 	            instance.$vuejs = html.then(template => new Vue(Object.assign({}, options, {
 	                el: tools_1.createElement(template),
-	                data: instance
+	                data: { instance_extension_vuejs: instance }
 	            })));
 	            instance.$vuejs.then(_ => options.initAfter && options.initAfter.forEach(fn => fn(_)));
 	        });
@@ -430,11 +444,12 @@ __MODE__ = undefined;
 	    exports.Component = (name, htmlPromise, target, options) => {
 	        options = options || {};
 	        options.methods = options.methods || {};
+	        options.computed = options.computed || {};
 	        var html = htmlPromise;
 	        var funcs = tools_1.getAllFuncs(target.prototype);
 	        funcs.filter(name => !tools_1.alreadyMap(options, name)).forEach(name => {
 	            options.methods[name] = function () {
-	                return this.$data[name].apply(this.$data, arguments);
+	                return this.$data[name].apply(this._data.instance_extension_vuejs, arguments);
 	            };
 	        });
 	        Vue.component(`vc-${name}`, (resolve, reject) => html
@@ -442,9 +457,11 @@ __MODE__ = undefined;
 	            template: template,
 	            data: function () {
 	                var data = options.data();
+	                var computed = tools_1.getComputedFromData(data);
+	                options.computed = Object.assign({}, computed, options.computed);
 	                data.$vuejs = Promise.resolve(this);
 	                data.$vuejs.then(_ => options.initAfter && options.initAfter.forEach(fn => fn(_)));
-	                return data;
+	                return { instance_extension_vuejs: data };
 	            }
 	        })))
 	            .catch(_ => reject(_)));
@@ -519,17 +536,25 @@ __MODE__ = undefined;
 	    "use strict";
 	    Object.defineProperty(exports, "__esModule", { value: true });
 	    const option_1 = require("core/option");
-	    exports.computed = (target, propertyKey) => {
-	        return option_1.setVueOptions(target, () => {
+	    function computed(target, propertyKey) {
+	        var option = typeof (target) === "string" ? target : null;
+	        var callback = (target, propertyKey) => option_1.setVueOptions(target, () => {
 	            var options = {
 	                computed: {}
 	            };
-	            options.computed[propertyKey] = function () {
-	                return this._data[propertyKey].apply(this._data, arguments);
+	            options.computed[option || propertyKey] = function () {
+	                return this._data.instance_extension_vuejs[propertyKey].apply(this._data.instance_extension_vuejs, arguments);
 	            };
 	            return options;
 	        });
-	    };
+	        if (option) {
+	            return callback;
+	        }
+	        else {
+	            return callback(target, propertyKey);
+	        }
+	    }
+	    exports.computed = computed;
 	});
 	
 	(function (factory) {
@@ -544,17 +569,25 @@ __MODE__ = undefined;
 	    "use strict";
 	    Object.defineProperty(exports, "__esModule", { value: true });
 	    const option_1 = require("core/option");
-	    exports.methods = (target, propertyKey) => {
-	        option_1.setVueOptions(target, () => {
+	    function methods(target, propertyKey) {
+	        var option = typeof (target) === "string" ? target : null;
+	        var callback = (target, propertyKey) => option_1.setVueOptions(target, () => {
 	            var options = {
 	                methods: {}
 	            };
-	            options.methods[propertyKey] = function () {
-	                return this._data[propertyKey].apply(this._data, arguments);
+	            options.methods[option || propertyKey] = function () {
+	                return this._data.instance_extension_vuejs[propertyKey].apply(this._data.instance_extension_vuejs, arguments);
 	            };
 	            return options;
 	        });
-	    };
+	        if (option) {
+	            return callback;
+	        }
+	        else {
+	            return callback(target, propertyKey);
+	        }
+	    }
+	    exports.methods = methods;
 	});
 	
 	(function (factory) {
@@ -569,21 +602,31 @@ __MODE__ = undefined;
 	    "use strict";
 	    Object.defineProperty(exports, "__esModule", { value: true });
 	    const option_1 = require("core/option");
-	    exports.props = (options) => (target, propertyKey) => {
-	        option_1.setVueOptions(target, () => {
+	    function props(target, propertyKey) {
+	        var options = arguments.length <= 1 ? target : { name: propertyKey };
+	        var callback = (target, propertyKey) => option_1.setVueOptions(target, () => {
 	            var option = {
 	                props: [options.name],
 	                watch: {},
 	                initAfter: [($vuejs) => {
-	                        $vuejs._data[propertyKey] = $vuejs[options.name] !== undefined && $vuejs[options.name] || $vuejs._data[propertyKey];
+	                        $vuejs._data.instance_extension_vuejs[propertyKey] = $vuejs[options.name] !== undefined && $vuejs[options.name] || $vuejs._data.instance_extension_vuejs[propertyKey];
 	                    }]
 	            };
-	            option.watch[options.name] = function (value, oldValue) {
-	                this._data[propertyKey] = value;
-	            };
+	            if (options.name !== propertyKey) {
+	                option.watch[options.name] = function (value, oldValue) {
+	                    this._data.instance_extension_vuejs[propertyKey] = value;
+	                };
+	            }
 	            return option;
 	        });
-	    };
+	        if (arguments.length <= 1) {
+	            return callback;
+	        }
+	        else {
+	            return callback(target, propertyKey);
+	        }
+	    }
+	    exports.props = props;
 	});
 	
 	(function (factory) {

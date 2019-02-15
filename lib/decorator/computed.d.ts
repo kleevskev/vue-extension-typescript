@@ -1,1 +1,2 @@
-export declare let computed: <T>(target: any, propertyKey: string) => void;
+export declare function computed<T>(target: any): any;
+export declare function computed<T>(target: any, propertyKey: string): any;
