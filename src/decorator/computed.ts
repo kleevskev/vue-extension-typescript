@@ -9,7 +9,7 @@ export function computed<T>(target: any, propertyKey?: string) {
             computed: {}
         };
         options.computed[option || propertyKey] = function () {
-            return this._data.instance_extension_vuejs[propertyKey].apply(this._data.instance_extension_vuejs, arguments);
+            return this._data[propertyKey].apply(this._data, arguments);
         }
 
         return options;

@@ -329,17 +329,14 @@ __MODE__ = undefined;
 	        var funcs = tools_1.getAllFuncs(target.prototype);
 	        funcs.filter(name => !tools_1.alreadyMap(options, name)).forEach(name => {
 	            options.methods[name] = function () {
-	                return this.$data[name].apply(this._data.instance_extension_vuejs, arguments);
+	                return this.$data[name].apply(this._data, arguments);
 	            };
 	        });
 	        var result = (new Function('constructor', `return function ${target.name}() { constructor(this, arguments); };`))(function (instance, args) {
 	            var instance = target.apply(instance, args) || instance;
-	            var computed = tools_1.getComputedFromData(instance);
-	            options.computed = options.computed || {};
-	            options.computed = Object.assign({}, computed, options.computed);
 	            instance.$vuejs = html.then(template => new Vue(Object.assign({}, options, {
 	                el: tools_1.createElement(template),
-	                data: { instance_extension_vuejs: instance }
+	                data: instance
 	            })));
 	            instance.$vuejs.then(_ => options.initAfter && options.initAfter.forEach(fn => fn(_)));
 	        });
@@ -449,7 +446,7 @@ __MODE__ = undefined;
 	        var funcs = tools_1.getAllFuncs(target.prototype);
 	        funcs.filter(name => !tools_1.alreadyMap(options, name)).forEach(name => {
 	            options.methods[name] = function () {
-	                return this.$data[name].apply(this._data.instance_extension_vuejs, arguments);
+	                return this.$data[name].apply(this._data, arguments);
 	            };
 	        });
 	        Vue.component(`vc-${name}`, (resolve, reject) => html
@@ -457,11 +454,9 @@ __MODE__ = undefined;
 	            template: template,
 	            data: function () {
 	                var data = options.data();
-	                var computed = tools_1.getComputedFromData(data);
-	                options.computed = Object.assign({}, computed, options.computed);
 	                data.$vuejs = Promise.resolve(this);
 	                data.$vuejs.then(_ => options.initAfter && options.initAfter.forEach(fn => fn(_)));
-	                return { instance_extension_vuejs: data };
+	                return data;
 	            }
 	        })))
 	            .catch(_ => reject(_)));
@@ -543,7 +538,7 @@ __MODE__ = undefined;
 	                computed: {}
 	            };
 	            options.computed[option || propertyKey] = function () {
-	                return this._data.instance_extension_vuejs[propertyKey].apply(this._data.instance_extension_vuejs, arguments);
+	                return this._data[propertyKey].apply(this._data, arguments);
 	            };
 	            return options;
 	        });
@@ -576,7 +571,7 @@ __MODE__ = undefined;
 	                methods: {}
 	            };
 	            options.methods[option || propertyKey] = function () {
-	                return this._data.instance_extension_vuejs[propertyKey].apply(this._data.instance_extension_vuejs, arguments);
+	                return this._data[propertyKey].apply(this._data, arguments);
 	            };
 	            return options;
 	        });
@@ -609,15 +604,15 @@ __MODE__ = undefined;
 	                props: [options.name],
 	                watch: {},
 	                initAfter: [($vuejs) => {
-	                        $vuejs._data.instance_extension_vuejs[propertyKey] = $vuejs[options.name] !== undefined && $vuejs[options.name] || $vuejs._data.instance_extension_vuejs[propertyKey];
+	                        $vuejs._data[propertyKey] = $vuejs[options.name] !== undefined && $vuejs[options.name] || $vuejs._data[propertyKey];
 	                    }]
 	            };
 	            if (options.name !== propertyKey) {
 	                option.watch[options.name] = function (value, oldValue) {
-	                    this._data.instance_extension_vuejs[propertyKey] = value;
+	                    this._data[propertyKey] = value;
 	                };
+	                return option;
 	            }
-	            return option;
 	        });
 	        if (arguments.length <= 1) {
 	            return callback;

@@ -1,4 +1,4 @@
-import { createElement, getAllFuncs, alreadyMap, getComputedFromData } from './tools';
+import { createElement, getAllFuncs, alreadyMap } from './tools';
 
 declare let Vue;
 
@@ -9,19 +9,16 @@ export let View = <TClass extends new (...arg) => TInstance, TInstance>(htmlProm
     var funcs = getAllFuncs(target.prototype);
     funcs.filter(name => !alreadyMap(options, name)).forEach(name => {
 		options.methods[name] = function () {
-            return this.$data[name].apply(this._data.instance_extension_vuejs, arguments);
+            return this.$data[name].apply(this._data, arguments);
         }
 	});
  
     var result = (new Function('constructor', `return function ${target.name}() { constructor(this, arguments); };`))(
         function (instance, args) {
             var instance = target.apply(instance, args) || instance;
-			var computed = getComputedFromData(instance);
-			options.computed = options.computed || {};
-			options.computed = Object.assign({}, computed, options.computed);
             instance.$vuejs = html.then(template => new Vue(Object.assign({}, options, {
                 el: createElement(template),
-                data: { instance_extension_vuejs: instance }
+                data: instance
             })));
             instance.$vuejs.then(_ => options.initAfter && options.initAfter.forEach(fn => fn(_)));
         });
