@@ -9,3 +9,5 @@ src/*.map
 example
 example/*
 !src/*.d.ts
+sandbox
+sandbox/.*
