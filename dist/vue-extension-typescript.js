@@ -85,622 +85,6 @@ __MODE__ = undefined;
 		return define; 
 	})();
 
-	(function (factory) {
-	    if (typeof module === "object" && typeof module.exports === "object") {
-	        var v = factory(require, exports);
-	        if (v !== undefined) module.exports = v;
-	    }
-	    else if (typeof define === "function" && define.amd) {
-	        define('lib/core/dependency-injection.js', ["require", "exports"], factory);
-	    }
-	})(function (require, exports) {
-	    "use strict";
-	    Object.defineProperty(exports, "__esModule", { value: true });
-	    var context = window;
-	    context.Reflect = context.Reflect || {};
-	    context.Reflect.metadata = (k, v) => {
-	        return function () {
-	            let metadata = arguments[arguments.length - 1];
-	            metadata[k] = v;
-	        };
-	    };
-	    context.Reflect.decorate = (decorators, target, key, desc) => {
-	        var r = key === undefined ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, metadata = {}, d;
-	        for (var i = decorators.length - 1; i >= 0; i--) {
-	            if (d = decorators[i]) {
-	                r = (!key ? d(r, metadata) : desc ? d(target, key, r, metadata) : d(target, key, metadata)) || r;
-	            }
-	        }
-	        return r;
-	    };
-	    class IProvider {
-	    }
-	    exports.IProvider = IProvider;
-	    class IConfig {
-	    }
-	    exports.IConfig = IConfig;
-	    class Provider extends IProvider {
-	        constructor(_config) {
-	            super();
-	            this._config = _config;
-	            this._register = [];
-	        }
-	        create(data) {
-	            var param = [];
-	            data && data.parameters && data.parameters.forEach((key) => {
-	                param.push(this.getService(key));
-	            });
-	            return data.value ?
-	                (param.length <= 0 ?
-	                    new data.value() :
-	                    new (data.value.bind.apply(data.value, [null].concat(param)))()) : undefined;
-	        }
-	        createService(key, parameters) {
-	            let instance;
-	            let service = this._config.getService(key);
-	            service = service || { value: key, parameters: [] };
-	            parameters && (service.parameters = parameters);
-	            instance = this.create(service);
-	            service && service.initialize && service.initialize(instance);
-	            return instance;
-	        }
-	        getService(key) {
-	            if (key == IProvider) {
-	                return this;
-	            }
-	            var result = this._register.filter((item) => item.key === key).map((item) => item.value)[0];
-	            var registerable = !result && this._config.getService(key).registerable;
-	            result = result || this.createService(key);
-	            registerable && this._register.push({ key: key, value: result });
-	            return result;
-	        }
-	    }
-	    class Config extends IConfig {
-	        constructor() {
-	            super();
-	            this._register = [];
-	        }
-	        addService(key, value, options) {
-	            this._register.unshift({
-	                key: key,
-	                value: value,
-	                parameters: options.parameters,
-	                registerable: options.registerable,
-	                initialize: options.initialize,
-	                test: options.test
-	            });
-	        }
-	        getService(key) {
-	            return this._register
-	                .filter((item) => item.key === key)
-	                .filter(item => !item.test || item.test(item.value))
-	                .map((item) => {
-	                return {
-	                    value: item.value,
-	                    parameters: item.parameters,
-	                    registerable: item.registerable,
-	                    initialize: item.initialize
-	                };
-	            })[0];
-	        }
-	    }
-	    class DependencyInjector {
-	        constructor() {
-	            this._config = new Config();
-	            this._provider = new Provider(this._config);
-	        }
-	        getConfig() { return this._config; }
-	        getProvider() { return this._provider; }
-	        getDecorator() {
-	            return (options) => {
-	                var res = (target, metadata) => {
-	                    this._config.addService(options.key, target, {
-	                        parameters: metadata && metadata["design:paramtypes"] || [],
-	                        registerable: options.cachable || options.cachable === undefined,
-	                        initialize: options.initialize
-	                    });
-	                };
-	                return res;
-	            };
-	        }
-	    }
-	    exports.DependencyInjector = DependencyInjector;
-	    var injector = new DependencyInjector();
-	    exports.config = injector.getConfig();
-	    exports.serviceProvider = injector.getProvider();
-	    exports.ServiceDecorator = injector.getDecorator();
-	});
-	
-	(function (factory) {
-	    if (typeof module === "object" && typeof module.exports === "object") {
-	        var v = factory(require, exports);
-	        if (v !== undefined) module.exports = v;
-	    }
-	    else if (typeof define === "function" && define.amd) {
-	        define('lib/core/tools.js', ["require", "exports"], factory);
-	    }
-	})(function (require, exports) {
-	    "use strict";
-	    Object.defineProperty(exports, "__esModule", { value: true });
-	    function getAllFuncs(obj) {
-	        var props = [];
-	        var tmp = obj;
-	        do {
-	            props = props.concat(Object.getOwnPropertyNames(tmp));
-	        } while (tmp = Object.getPrototypeOf(tmp));
-	        return props.sort().filter((e, i, arr) => {
-	            if (e != arr[i + 1] && typeof obj[e] == 'function' && e !== "constructor" && !e.startsWith("__"))
-	                return true;
-	        });
-	    }
-	    exports.getAllFuncs = getAllFuncs;
-	    function createElement(html) {
-	        html = html.trim();
-	        var isTr = html.match(/^<tr/);
-	        var isTd = html.match(/^<td/);
-	        var parser = document.createElement("div");
-	        if (isTr || isTd) {
-	            var table = document.createElement("table");
-	            parser = document.createElement("tbody");
-	            table.appendChild(parser);
-	            if (isTd) {
-	                var parent = parser;
-	                parser.appendChild(parser = document.createElement("tr"));
-	            }
-	        }
-	        parser.innerHTML = html;
-	        return parser.firstChild;
-	    }
-	    exports.createElement = createElement;
-	    ;
-	    function alreadyMap(option, propName) {
-	        for (var i in option) {
-	            if (option[i] && propName in option[i])
-	                return true;
-	        }
-	        return false;
-	    }
-	    exports.alreadyMap = alreadyMap;
-	    function deepCopy(object) {
-	        if (object instanceof Array || (typeof (object)).trim().toLowerCase() === "object") {
-	            var result = object instanceof Array && [] || {};
-	            for (var i in object) {
-	                result[i] = deepCopy(object[i]);
-	            }
-	            return result;
-	        }
-	        else {
-	            return object;
-	        }
-	    }
-	    exports.deepCopy = deepCopy;
-	    function dm(target, source) {
-	        if (target instanceof Array || (typeof (target)).trim().toLowerCase() === "object") {
-	            var result = target;
-	            for (var i in source) {
-	                if (source[i] !== undefined || source[i] !== null) {
-	                    if (target instanceof Array) {
-	                        result.push(deepCopy(source[i]));
-	                    }
-	                    else {
-	                        result[i] = dm(target[i], source[i]);
-	                    }
-	                }
-	            }
-	            return result;
-	        }
-	        else {
-	            return source || target;
-	        }
-	    }
-	    function deepMerge(target, source) {
-	        return dm(deepCopy(target), source);
-	    }
-	    exports.deepMerge = deepMerge;
-	    function getComputedFromData(obj) {
-	        var computed = {};
-	        Object.getOwnPropertyNames(obj).forEach((key) => {
-	            computed[key] = {
-	                get: function () { return this._data.instance_extension_vuejs[key]; },
-	                set: function (v) { return this._data.instance_extension_vuejs[key] = v; }
-	            };
-	        });
-	        return computed;
-	    }
-	    exports.getComputedFromData = getComputedFromData;
-	});
-	
-	(function (factory) {
-	    if (typeof module === "object" && typeof module.exports === "object") {
-	        var v = factory(require, exports);
-	        if (v !== undefined) module.exports = v;
-	    }
-	    else if (typeof define === "function" && define.amd) {
-	        define('lib/core/view.js', ["require", "exports", "./tools"], factory);
-	    }
-	})(function (require, exports) {
-	    "use strict";
-	    Object.defineProperty(exports, "__esModule", { value: true });
-	    const tools_1 = require("./tools");
-	    exports.View = (htmlPromise, target, options) => {
-	        options = options || {};
-	        options.methods = options.methods || {};
-	        var html = htmlPromise;
-	        var funcs = tools_1.getAllFuncs(target.prototype);
-	        funcs.filter(name => !tools_1.alreadyMap(options, name)).forEach(name => {
-	            options.methods[name] = function () {
-	                return this.$data[name].apply(this._data, arguments);
-	            };
-	        });
-	        var result = (new Function('constructor', `return function ${target.name}() { constructor(this, arguments); };`))(function (instance, args) {
-	            var instance = target.apply(instance, args) || instance;
-	            instance.$vuejs = html.then(template => new Vue(Object.assign({}, options, {
-	                el: tools_1.createElement(template),
-	                data: instance
-	            })));
-	            instance.$vuejs.then(_ => options.initAfter && options.initAfter.forEach(fn => fn(_)));
-	        });
-	        Object.setPrototypeOf(result, target);
-	        function __() { this.constructor = result; }
-	        result.prototype = target === null ? Object.create(target) : (__.prototype = target.prototype, new __());
-	        return result;
-	    };
-	});
-	
-	(function (factory) {
-	    if (typeof module === "object" && typeof module.exports === "object") {
-	        var v = factory(require, exports);
-	        if (v !== undefined) module.exports = v;
-	    }
-	    else if (typeof define === "function" && define.amd) {
-	        define('lib/core/option.js', ["require", "exports", "./tools"], factory);
-	    }
-	})(function (require, exports) {
-	    "use strict";
-	    Object.defineProperty(exports, "__esModule", { value: true });
-	    const tools_1 = require("./tools");
-	    let options = [];
-	    function getVueOptions(target) {
-	        return options.filter(_ => _.target === target.prototype).map(_ => _.value)[0];
-	    }
-	    exports.getVueOptions = getVueOptions;
-	    function setVueOptions(target, callback) {
-	        if (options.filter(_ => _.target === target)[0] == undefined) {
-	            options.push({ target: target, value: {} });
-	        }
-	        options.filter(_ => _.target === target).forEach(option => {
-	            var opt = callback();
-	            option.value = opt && tools_1.deepMerge(option.value, opt) || option.value;
-	        });
-	    }
-	    exports.setVueOptions = setVueOptions;
-	});
-	
-	(function (factory) {
-	    if (typeof module === "object" && typeof module.exports === "object") {
-	        var v = factory(require, exports);
-	        if (v !== undefined) module.exports = v;
-	    }
-	    else if (typeof define === "function" && define.amd) {
-	        define('lib/decorator/view.js', ["require", "exports", "core/view", "core/option"], factory);
-	    }
-	})(function (require, exports) {
-	    "use strict";
-	    Object.defineProperty(exports, "__esModule", { value: true });
-	    const view_1 = require("core/view");
-	    const option_1 = require("core/option");
-	    function View(options) {
-	        var html = options.html && (options.html.then && options.html || Promise.resolve(options.html));
-	        return (target) => view_1.View(html, target, option_1.getVueOptions(target));
-	    }
-	    exports.View = View;
-	});
-	
-	(function (factory) {
-	    if (typeof module === "object" && typeof module.exports === "object") {
-	        var v = factory(require, exports);
-	        if (v !== undefined) module.exports = v;
-	    }
-	    else if (typeof define === "function" && define.amd) {
-	        define('lib/decorator/view.service.js', ["require", "exports", "./view", "core/dependency-injection"], factory);
-	    }
-	})(function (require, exports) {
-	    "use strict";
-	    Object.defineProperty(exports, "__esModule", { value: true });
-	    const view_1 = require("./view");
-	    const dependency_injection_1 = require("core/dependency-injection");
-	    function ViewService(options) {
-	        return (target, metadata) => {
-	            target = view_1.View(options)(target) || target;
-	            var classTarget = target;
-	            while (classTarget && classTarget.constructor !== classTarget) {
-	                dependency_injection_1.ServiceDecorator({
-	                    key: classTarget,
-	                    cachable: false
-	                })(target, metadata);
-	                classTarget = Object.getPrototypeOf(classTarget);
-	            }
-	            return target;
-	        };
-	    }
-	    exports.ViewService = ViewService;
-	});
-	
-	(function (factory) {
-	    if (typeof module === "object" && typeof module.exports === "object") {
-	        var v = factory(require, exports);
-	        if (v !== undefined) module.exports = v;
-	    }
-	    else if (typeof define === "function" && define.amd) {
-	        define('lib/core/component.js', ["require", "exports", "./tools"], factory);
-	    }
-	})(function (require, exports) {
-	    "use strict";
-	    Object.defineProperty(exports, "__esModule", { value: true });
-	    const tools_1 = require("./tools");
-	    exports.Component = (name, htmlPromise, target, options) => {
-	        options = options || {};
-	        options.methods = options.methods || {};
-	        options.computed = options.computed || {};
-	        var html = htmlPromise;
-	        var funcs = tools_1.getAllFuncs(target.prototype);
-	        funcs.filter(name => !tools_1.alreadyMap(options, name)).forEach(name => {
-	            options.methods[name] = function () {
-	                return this.$data[name].apply(this._data, arguments);
-	            };
-	        });
-	        Vue.component(`vc-${name}`, (resolve, reject) => html
-	            .then(template => resolve(Object.assign({}, options, {
-	            template: template,
-	            data: function () {
-	                var data = options.data();
-	                data.$vuejs = Promise.resolve(this);
-	                data.$vuejs.then(_ => options.initAfter && options.initAfter.forEach(fn => fn(_)));
-	                return data;
-	            }
-	        })))
-	            .catch(_ => reject(_)));
-	        return target;
-	    };
-	});
-	
-	(function (factory) {
-	    if (typeof module === "object" && typeof module.exports === "object") {
-	        var v = factory(require, exports);
-	        if (v !== undefined) module.exports = v;
-	    }
-	    else if (typeof define === "function" && define.amd) {
-	        define('lib/decorator/component.js', ["require", "exports", "core/component", "core/option"], factory);
-	    }
-	})(function (require, exports) {
-	    "use strict";
-	    Object.defineProperty(exports, "__esModule", { value: true });
-	    const component_1 = require("core/component");
-	    const option_1 = require("core/option");
-	    function Component(options) {
-	        var html = options.html && (options.html.then && options.html || Promise.resolve(options.html));
-	        var provider = options.provider;
-	        return (target) => target = component_1.Component(options.name, html, target, Object.assign({}, option_1.getVueOptions(target), {
-	            data: () => provider && provider(target) || new target()
-	        })) || target;
-	    }
-	    exports.Component = Component;
-	});
-	
-	(function (factory) {
-	    if (typeof module === "object" && typeof module.exports === "object") {
-	        var v = factory(require, exports);
-	        if (v !== undefined) module.exports = v;
-	    }
-	    else if (typeof define === "function" && define.amd) {
-	        define('lib/decorator/component.service.js', ["require", "exports", "./component", "core/dependency-injection"], factory);
-	    }
-	})(function (require, exports) {
-	    "use strict";
-	    Object.defineProperty(exports, "__esModule", { value: true });
-	    const component_1 = require("./component");
-	    const dependency_injection_1 = require("core/dependency-injection");
-	    function ComponentService(options) {
-	        return (target, metadata) => {
-	            target = component_1.Component(Object.assign({}, options, {
-	                provider: (t) => dependency_injection_1.serviceProvider.createService(t)
-	            }))(target) || target;
-	            var classTarget = target;
-	            while (classTarget && classTarget.constructor !== classTarget) {
-	                dependency_injection_1.ServiceDecorator({
-	                    key: classTarget,
-	                    cachable: false
-	                })(target, metadata);
-	                classTarget = Object.getPrototypeOf(classTarget);
-	            }
-	            return target;
-	        };
-	    }
-	    exports.ComponentService = ComponentService;
-	});
-	
-	(function (factory) {
-	    if (typeof module === "object" && typeof module.exports === "object") {
-	        var v = factory(require, exports);
-	        if (v !== undefined) module.exports = v;
-	    }
-	    else if (typeof define === "function" && define.amd) {
-	        define('lib/decorator/computed.js', ["require", "exports", "core/option"], factory);
-	    }
-	})(function (require, exports) {
-	    "use strict";
-	    Object.defineProperty(exports, "__esModule", { value: true });
-	    const option_1 = require("core/option");
-	    function computed(target, propertyKey) {
-	        var option = typeof (target) === "string" ? target : null;
-	        var callback = (target, propertyKey) => option_1.setVueOptions(target, () => {
-	            var options = {
-	                computed: {}
-	            };
-	            options.computed[option || propertyKey] = function () {
-	                return this._data[propertyKey].apply(this._data, arguments);
-	            };
-	            return options;
-	        });
-	        if (option) {
-	            return callback;
-	        }
-	        else {
-	            return callback(target, propertyKey);
-	        }
-	    }
-	    exports.computed = computed;
-	});
-	
-	(function (factory) {
-	    if (typeof module === "object" && typeof module.exports === "object") {
-	        var v = factory(require, exports);
-	        if (v !== undefined) module.exports = v;
-	    }
-	    else if (typeof define === "function" && define.amd) {
-	        define('lib/decorator/methods.js', ["require", "exports", "core/option"], factory);
-	    }
-	})(function (require, exports) {
-	    "use strict";
-	    Object.defineProperty(exports, "__esModule", { value: true });
-	    const option_1 = require("core/option");
-	    function methods(target, propertyKey) {
-	        var option = typeof (target) === "string" ? target : null;
-	        var callback = (target, propertyKey) => option_1.setVueOptions(target, () => {
-	            var options = {
-	                methods: {}
-	            };
-	            options.methods[option || propertyKey] = function () {
-	                return this._data[propertyKey].apply(this._data, arguments);
-	            };
-	            return options;
-	        });
-	        if (option) {
-	            return callback;
-	        }
-	        else {
-	            return callback(target, propertyKey);
-	        }
-	    }
-	    exports.methods = methods;
-	});
-	
-	(function (factory) {
-	    if (typeof module === "object" && typeof module.exports === "object") {
-	        var v = factory(require, exports);
-	        if (v !== undefined) module.exports = v;
-	    }
-	    else if (typeof define === "function" && define.amd) {
-	        define('lib/decorator/prop.js', ["require", "exports", "core/option"], factory);
-	    }
-	})(function (require, exports) {
-	    "use strict";
-	    Object.defineProperty(exports, "__esModule", { value: true });
-	    const option_1 = require("core/option");
-	    function props(target, propertyKey) {
-	        var options = arguments.length <= 1 ? target : { name: propertyKey };
-	        var callback = (target, propertyKey) => option_1.setVueOptions(target, () => {
-	            var option = {
-	                props: [options.name],
-	                watch: {},
-	                initAfter: [($vuejs) => {
-	                        $vuejs._data[propertyKey] = $vuejs[options.name] !== undefined && $vuejs[options.name] || $vuejs._data[propertyKey];
-	                    }]
-	            };
-	            if (options.name !== propertyKey) {
-	                option.watch[options.name] = function (value, oldValue) {
-	                    this._data[propertyKey] = value;
-	                };
-	                return option;
-	            }
-	        });
-	        if (arguments.length <= 1) {
-	            return callback;
-	        }
-	        else {
-	            return callback(target, propertyKey);
-	        }
-	    }
-	    exports.props = props;
-	});
-	
-	(function (factory) {
-	    if (typeof module === "object" && typeof module.exports === "object") {
-	        var v = factory(require, exports);
-	        if (v !== undefined) module.exports = v;
-	    }
-	    else if (typeof define === "function" && define.amd) {
-	        define('lib/decorator/event.js', ["require", "exports", "core/option"], factory);
-	    }
-	})(function (require, exports) {
-	    "use strict";
-	    Object.defineProperty(exports, "__esModule", { value: true });
-	    const option_1 = require("core/option");
-	    exports.event = (options) => (target, propertyKey, descriptor) => {
-	        var eventType = options.name;
-	        option_1.setVueOptions(target, () => {
-	            var base = descriptor.value;
-	            descriptor.value = function () {
-	                var result = base.apply(this, arguments);
-	                this.$vuejs.then(vuejs => vuejs.$emit(eventType, result));
-	                return result;
-	            };
-	        });
-	    };
-	});
-	
-	(function (factory) {
-	    if (typeof module === "object" && typeof module.exports === "object") {
-	        var v = factory(require, exports);
-	        if (v !== undefined) module.exports = v;
-	    }
-	    else if (typeof define === "function" && define.amd) {
-	        define('lib/core/directive.js', ["require", "exports"], factory);
-	    }
-	})(function (require, exports) {
-	    "use strict";
-	    Object.defineProperty(exports, "__esModule", { value: true });
-	    exports.Directive = (name, instance) => {
-	        Vue.directive(name, {
-	            bind: instance.bind && instance.bind.bind(instance),
-	            inserted: instance.inserted && instance.inserted.bind(instance),
-	            update: instance.update && instance.update.bind(instance),
-	            componentUpdated: instance.componentUpdated && instance.componentUpdated.bind(instance),
-	            unbind: instance.unbind && instance.unbind.bind(instance)
-	        });
-	    };
-	});
-	
-	(function (factory) {
-	    if (typeof module === "object" && typeof module.exports === "object") {
-	        var v = factory(require, exports);
-	        if (v !== undefined) module.exports = v;
-	    }
-	    else if (typeof define === "function" && define.amd) {
-	        define('lib/decorator/directive.js', ["require", "exports", "core/directive", "core/dependency-injection"], factory);
-	    }
-	})(function (require, exports) {
-	    "use strict";
-	    Object.defineProperty(exports, "__esModule", { value: true });
-	    const directive_1 = require("core/directive");
-	    const dependency_injection_1 = require("core/dependency-injection");
-	    function Directive(options) {
-	        var name = options.name;
-	        return (target, metadata) => {
-	            var classTarget = target;
-	            while (classTarget && classTarget.constructor !== classTarget) {
-	                dependency_injection_1.ServiceDecorator({
-	                    key: classTarget,
-	                    cachable: false
-	                })(target, metadata);
-	                classTarget = Object.getPrototypeOf(classTarget);
-	            }
-	            directive_1.Directive(name, dependency_injection_1.serviceProvider.getService(target));
-	        };
-	    }
-	    exports.Directive = Directive;
-	});
-	
 	var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
 	    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
 	    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -713,69 +97,289 @@ __MODE__ = undefined;
 	        if (v !== undefined) module.exports = v;
 	    }
 	    else if (typeof define === "function" && define.amd) {
-	        define('lib/directive/view.directive.js', ["require", "exports", "../decorator/directive"], factory);
+	        define('lib/index.js', ["require", "exports"], factory);
 	    }
 	})(function (require, exports) {
 	    "use strict";
 	    Object.defineProperty(exports, "__esModule", { value: true });
-	    const directive_1 = require("../decorator/directive");
-	    let ViewDirective = class ViewDirective {
-	        bind(el, binding, vnode) {
-	            this.update(el, binding, vnode);
-	        }
-	        update(el, binding, vnode) {
-	            if (binding.value && binding.value.$vuejs && binding.value.$vuejs.then) {
-	                binding.value.$vuejs.then(_ => {
-	                    while (el.firstChild) {
-	                        el.removeChild(el.firstChild);
-	                    }
-	                    el.appendChild(_.$el);
-	                });
-	            }
-	            else {
-	                while (el.firstChild) {
-	                    el.removeChild(el.firstChild);
-	                }
-	            }
+	    var context = window;
+	    context.Reflect = context.Reflect || {};
+	    context.Reflect.metadata = (k, v) => {
+	        return function (target) {
+	            target.$$ioc = target.$$ioc || {};
+	            target.$$ioc.metadata = {};
+	            target.$$ioc.metadata[k] = v;
+	        };
+	    };
+	    var explorePrototype = (target, callback) => {
+	        var classTarget = Object.getPrototypeOf(target);
+	        while (classTarget && classTarget.constructor !== classTarget) {
+	            callback(classTarget.constructor);
+	            classTarget = Object.getPrototypeOf(classTarget);
 	        }
 	    };
-	    ViewDirective = __decorate([
-	        directive_1.Directive({ name: "view" })
-	    ], ViewDirective);
-	});
-	
-	(function (factory) {
-	    if (typeof module === "object" && typeof module.exports === "object") {
-	        var v = factory(require, exports);
-	        if (v !== undefined) module.exports = v;
+	    class Container {
+	        createService(target, context) {
+	            var trgt = target;
+	            return trgt.$$ioc && trgt.$$ioc.builder && trgt.$$ioc.builder(this, trgt, context || {}) || new trgt();
+	        }
 	    }
-	    else if (typeof define === "function" && define.amd) {
-	        define('lib/index.js', ["require", "exports", "core/dependency-injection", "decorator/view.service", "decorator/component.service", "decorator/computed", "decorator/methods", "decorator/prop", "decorator/event", "decorator/directive", "core/dependency-injection", "directive/view.directive"], factory);
+	    var factoryDecorator = (callback) => (target) => {
+	        target.$$ioc = target.$$ioc || {};
+	        target.$$ioc.builder = callback;
+	    };
+	    var injectorDecorator = (options) => (target) => {
+	        return factoryDecorator((container, key, context) => {
+	            var trgt = target;
+	            var param = (trgt.$$ioc && trgt.$$ioc.metadata && trgt.$$ioc.metadata["design:paramtypes"] || [])
+	                .map((type) => options.callback(container, type, context));
+	            var instance = trgt ?
+	                (param.length <= 0 ?
+	                    new trgt() :
+	                    new (trgt.bind.apply(trgt, [null].concat(param)))()) : undefined;
+	            return instance;
+	        })(options.key);
+	    };
+	    var serviceDecorator = (options) => injectorDecorator({
+	        key: options.key,
+	        callback: (container, type, context) => {
+	            context.created = context.created || [];
+	            var result = context.created.filter(_ => _.key === type).map(_ => _.value)[0];
+	            if (!result) {
+	                result = container.createService(type, context);
+	                context.created.push({ key: type, value: result });
+	            }
+	            return result;
+	        }
+	    });
+	    exports.Service = serviceDecorator;
+	    var dataDecorator = (targetPrototype, key, desc) => {
+	        var desc = desc || {};
+	        var getter = desc && desc.get;
+	        var setter = desc && desc.set;
+	        targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {};
+	        targetPrototype.$$vuejsext.computed = targetPrototype.$$vuejsext.computed || {};
+	        targetPrototype.$$vuejsext.computed[key] = {
+	            get: function () {
+	                return this.$data.zyx123values[key];
+	            },
+	            set: function (value) {
+	                this.$data.zyx123values[key] = value;
+	            }
+	        };
+	        decorate(targetPrototype, key);
+	        return desc;
+	    };
+	    exports.data = dataDecorator;
+	    var decorate = (targetPrototype, key) => {
+	        targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {};
+	        targetPrototype.$$vuejsext.decorate = targetPrototype.$$vuejsext.decorate || {};
+	        targetPrototype.$$vuejsext.decorate[key] = true;
+	    };
+	    var isDecorate = (targetPrototype, key) => targetPrototype.$$vuejsext && targetPrototype.$$vuejsext.decorate && targetPrototype.$$vuejsext.decorate[key];
+	    var beforeMount = (callback) => (targetPrototype) => {
+	        targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {};
+	        targetPrototype.$$vuejsext.beforeMount = targetPrototype.$$vuejsext.beforeMount || [];
+	        targetPrototype.$$vuejsext.beforeMount.push(callback);
+	    };
+	    var computedDecorator = (targetPrototype, key) => {
+	        decorate(targetPrototype, key);
+	        targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {};
+	        targetPrototype.$$vuejsext.computed = targetPrototype.$$vuejsext.computed || {};
+	        targetPrototype.$$vuejsext.computed[key] = function () {
+	            return this.$data.zyx123values[key];
+	        };
+	    };
+	    exports.computed = computedDecorator;
+	    var watchDecorator = (name) => (targetPrototype, key, desc) => {
+	        decorate(targetPrototype, key);
+	        targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {};
+	        targetPrototype.$$vuejsext.watch = targetPrototype.$$vuejsext.watch || {};
+	        targetPrototype.$$vuejsext.watch[name] = function () {
+	            this.$data.zyx123values[key]();
+	        };
+	    };
+	    exports.watch = watchDecorator;
+	    var methodDecorator = (targetPrototype, key, desc) => {
+	        decorate(targetPrototype, key);
+	        targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {};
+	        targetPrototype.$$vuejsext.methods = targetPrototype.$$vuejsext.methods || {};
+	        targetPrototype.$$vuejsext.methods[key] = function () {
+	            this.$data.$$targetInstance[key].apply(this.$data.$$targetInstance, arguments);
+	        };
+	    };
+	    exports.methods = methodDecorator;
+	    var eventDecorator = (targetPrototype, key, desc) => {
+	        decorate(targetPrototype, key);
+	        methodDecorator(targetPrototype, key, desc);
+	        var _super = desc.value;
+	        desc.value = function () {
+	            var result = _super.apply(this, arguments);
+	            this.$vuedata.$vuejs && this.$vuedata.$vuejs.then(vuejs => vuejs.$emit(key, result));
+	            return result;
+	        };
+	    };
+	    exports.event = eventDecorator;
+	    var propDecorator = (targetPrototype, key, desc) => {
+	        var desc = desc || {};
+	        var setter = desc && desc.set;
+	        targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {};
+	        targetPrototype.$$vuejsext.watch = targetPrototype.$$vuejsext.watch || {};
+	        targetPrototype.$$vuejsext.watch[key] = function () {
+	            this.$data.zyx123values[key] = this[key];
+	        };
+	        decorate(targetPrototype, key);
+	        targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {};
+	        targetPrototype.$$vuejsext.props = targetPrototype.$$vuejsext.props || {};
+	        targetPrototype.$$vuejsext.props[key] = {};
+	        return desc;
+	    };
+	    exports.props = propDecorator;
+	    var setDefaultConfig = (target) => {
+	        var targetPrototype = target.prototype;
+	        Object.keys(targetPrototype)
+	            .filter(key => key.indexOf("$") !== 0)
+	            .forEach(key => {
+	            if (!isDecorate(targetPrototype, key)) {
+	                var descriptor = Object.getOwnPropertyDescriptor(targetPrototype, key);
+	                if (descriptor.get && descriptor.set) {
+	                    Object.defineProperty(targetPrototype, key, dataDecorator(targetPrototype, key, descriptor));
+	                }
+	                else if (descriptor.set) {
+	                    Object.defineProperty(targetPrototype, key, propDecorator(targetPrototype, key, descriptor));
+	                }
+	                else if (descriptor.get) {
+	                    computedDecorator(targetPrototype, key);
+	                }
+	            }
+	        });
+	    };
+	    var GetVueConfig = (options) => (target) => {
+	        setDefaultConfig(target);
+	        target.prototype.$$vuejsext = target.prototype.$$vuejsext || {};
+	        var data = target.prototype.$$vuejsext.data || {};
+	        var computed = target.prototype.$$vuejsext.computed || {};
+	        var watch = target.prototype.$$vuejsext.watch || {};
+	        var props = target.prototype.$$vuejsext.props || {};
+	        var methods = target.prototype.$$vuejsext.methods || {};
+	        var html = options.html;
+	        var el = options.el;
+	        var inits = target.prototype.$$vuejsext.init || [];
+	        var beforeMounts = target.prototype.$$vuejsext.beforeMount || [];
+	        var initValues = (d) => inits.forEach((fn) => fn(d));
+	        var beforeMount = function () { beforeMounts.forEach((fn) => fn(this)); };
+	        return {
+	            data: data,
+	            computed: computed,
+	            watch: watch,
+	            props: props,
+	            methods: methods,
+	            html: html,
+	            el: el,
+	            initValues: initValues,
+	            beforeMount: beforeMount,
+	            setVueInstance: (d, vi) => d.$vuejs = vi
+	        };
+	    };
+	    var vueInjectorDecorator = (target) => explorePrototype(target, (prototypeClass) => {
+	        injectorDecorator({
+	            key: prototypeClass,
+	            callback: (container, type, context) => {
+	                context.created = context.created || [];
+	                var result = context.created.filter(_ => _.key === type).map(_ => _.value)[0];
+	                if (!result) {
+	                    if (type && type.$$vuejs && type.$$vuejs.isComponent) {
+	                    }
+	                    else if (type && type.$$vuejs && type.$$vuejs.isVue) {
+	                        result = container.createService(type, context);
+	                    }
+	                    else {
+	                        result = container.createService(type, context);
+	                        context.created.push({ key: type, value: result });
+	                    }
+	                }
+	                return result;
+	            }
+	        })(target);
+	    });
+	    var extendClass = (target, init) => {
+	        var result = (new Function('constructor', `return function ${target.name}() { constructor(this, arguments); };`))(function (instance, args) {
+	            var d = { zyx123values: instance };
+	            instance.$vuedata = d;
+	            var instance = target.apply(instance, args) || instance;
+	            init(d);
+	        });
+	        Object.setPrototypeOf(result, target);
+	        function __() { this.constructor = result; }
+	        result.prototype = target === null ? Object.create(target) : (__.prototype = target.prototype, new __());
+	        return result;
+	    };
+	    var ComponentDecorator = (options) => (target) => {
+	        target.$$vuejs = target.$$vuejs || {};
+	        target.$$vuejs.isComponent = true;
+	        var result = extendClass(target, (data) => { });
+	        vueInjectorDecorator(result);
+	        var config = GetVueConfig(options)(target);
+	        delete config.el;
+	        Vue.component(options.name, (resolve) => {
+	            config.html.then(template => resolve(Object.assign({}, config, {
+	                template: template,
+	                data: function () {
+	                    var instance = container.createService(result, containerContext);
+	                    config.setVueInstance(instance.$vuedata, Promise.resolve(this));
+	                    return instance.$vuedata;
+	                }
+	            })));
+	        });
+	        return result;
+	    };
+	    exports.Component = ComponentDecorator;
+	    var VueDecorator = (options) => (target) => {
+	        target.$$vuejs = target.$$vuejs || {};
+	        target.$$vuejs.isVue = true;
+	        var result = extendClass(target, (instance) => {
+	            config.setVueInstance(instance.$vuedata, config.html.then(template => new Vue(Object.assign({}, config, {
+	                el: config.el,
+	                data: instance.$vuedata,
+	                template: template
+	            }))));
+	        });
+	        vueInjectorDecorator(result);
+	        var config = GetVueConfig(options)(target);
+	        return result;
+	    };
+	    exports.View = VueDecorator;
+	    var container = new Container();
+	    var containerContext = {};
+	    var DirectiveDecorator = (options) => target => {
+	        vueInjectorDecorator(target);
+	        var instance = container.createService(target, containerContext);
+	        Vue.directive(name, {
+	            bind: instance.bind && instance.bind.bind(instance),
+	            inserted: instance.inserted && instance.inserted.bind(instance),
+	            update: instance.update && instance.update.bind(instance),
+	            componentUpdated: instance.componentUpdated && instance.componentUpdated.bind(instance),
+	            unbind: instance.unbind && instance.unbind.bind(instance)
+	        });
+	    };
+	    exports.Directive = DirectiveDecorator;
+	    class IServiceProvider {
 	    }
-	})(function (require, exports) {
-	    "use strict";
-	    Object.defineProperty(exports, "__esModule", { value: true });
-	    const dependency_injection_1 = require("core/dependency-injection");
-	    var view_service_1 = require("decorator/view.service");
-	    exports.View = view_service_1.ViewService;
-	    var component_service_1 = require("decorator/component.service");
-	    exports.Component = component_service_1.ComponentService;
-	    var computed_1 = require("decorator/computed");
-	    exports.computed = computed_1.computed;
-	    var methods_1 = require("decorator/methods");
-	    exports.methods = methods_1.methods;
-	    var prop_1 = require("decorator/prop");
-	    exports.props = prop_1.props;
-	    var event_1 = require("decorator/event");
-	    exports.event = event_1.event;
-	    var directive_1 = require("decorator/directive");
-	    exports.Directive = directive_1.Directive;
-	    var dependency_injection_2 = require("core/dependency-injection");
-	    exports.Service = dependency_injection_2.ServiceDecorator;
-	    exports.IServiceProvider = dependency_injection_2.IProvider;
-	    require("directive/view.directive");
-	    function start(target, element) {
-	        dependency_injection_1.serviceProvider.createService(target).$vuejs.then(_ => element.appendChild(_.$el));
+	    exports.IServiceProvider = IServiceProvider;
+	    let ServiceProvider = class ServiceProvider extends IServiceProvider {
+	        createService(target) {
+	            return container.createService(target, containerContext);
+	        }
+	        getService(type) {
+	            containerContext.created = containerContext.created || {};
+	            return containerContext.created.filter(_ => _.key === type).map(_ => _.value)[0] || this.createService(type);
+	        }
+	    };
+	    ServiceProvider = __decorate([
+	        serviceDecorator({ key: IServiceProvider })
+	    ], ServiceProvider);
+	    function start(target) {
+	        container.createService(target, containerContext);
 	    }
 	    exports.start = start;
 	});

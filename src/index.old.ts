@@ -69,17 +69,34 @@ var dataDecorator = (targetPrototype, key, desc?) => {
     var desc = desc || {};
     var getter = desc && desc.get;
     var setter = desc && desc.set;
-    
-    targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {}; 
-    targetPrototype.$$vuejsext.computed = targetPrototype.$$vuejsext.computed || {};
-    targetPrototype.$$vuejsext.computed[key] = { 
-        get: function () { 
-            return this.$data.zyx123values[key];
-        }, 
-        set: function (value) {
-            this.$data.zyx123values[key] = value;
-        }
+    desc.get = function () {
+		var value = getter ? getter.apply(this, arguments) : this.$vuedata.zyx123values[key];
+		if (value !== this.$vuedata.zyx123values[key]) {
+			this.$vuedata.zyx123values[key] = value;
+		}
+		
+        return value;
     }
+    desc.set = function () {
+        setter && setter.apply(this, arguments);
+        this.$vuedata.zyx123values[key] = setter ? this[key] : arguments[0];
+    }
+	
+	init(data => {
+		data.zyx123values = data.zyx123values || {};
+        data.zyx123values[key] = data.$$targetInstance[key] != undefined ? data.$$targetInstance[key] : null; 
+	})(targetPrototype);
+	
+	beforeMount(vueInstance => { 
+		var descriptor: any = {};
+		descriptor.set = function () { 
+			vueInstance.$data.$$targetInstance[key] = arguments[0];
+		}
+		descriptor.get = function () { 
+			return vueInstance.$data.zyx123values[key];
+		}
+		Object.defineProperty(vueInstance, key, descriptor);
+	})(targetPrototype);
 
 	decorate(targetPrototype, key);
     return desc;
@@ -93,6 +110,12 @@ var decorate = (targetPrototype, key) => {
 
 var isDecorate = (targetPrototype, key) => targetPrototype.$$vuejsext && targetPrototype.$$vuejsext.decorate && targetPrototype.$$vuejsext.decorate[key];
 
+var init = (callback: (data) => void) => (targetPrototype) => {
+	targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {}; 
+    targetPrototype.$$vuejsext.init = targetPrototype.$$vuejsext.init || [];
+    targetPrototype.$$vuejsext.init.push(callback);
+}
+
 var beforeMount = (callback: (vueInstance) => void) => (targetPrototype) => {
 	targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {}; 
     targetPrototype.$$vuejsext.beforeMount = targetPrototype.$$vuejsext.beforeMount || [];
@@ -104,7 +127,7 @@ var computedDecorator = (targetPrototype, key) => {
     targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {}; 
     targetPrototype.$$vuejsext.computed = targetPrototype.$$vuejsext.computed || {};
     targetPrototype.$$vuejsext.computed[key] = function () { 
-        return this.$data.zyx123values[key];
+        return this.$data.$$targetInstance[key];
     }
 }
 
@@ -112,8 +135,8 @@ var watchDecorator = (name: string) => (targetPrototype, key, desc) => {
 	decorate(targetPrototype, key);
     targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {}; 
     targetPrototype.$$vuejsext.watch = targetPrototype.$$vuejsext.watch || {};
-    targetPrototype.$$vuejsext.watch[name] = function () { 
-        this.$data.zyx123values[key]();
+    targetPrototype.$$vuejsext.watch[`zyx123values.${name}`] = function () { 
+        this.$data.$$targetInstance[key]();
     }
 }
 
@@ -140,10 +163,9 @@ var eventDecorator = (targetPrototype, key, desc) => {
 var propDecorator = (targetPrototype, key, desc?) => {
     var desc = desc || {};
     var setter = desc && desc.set;
-    targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {}; 
-    targetPrototype.$$vuejsext.watch = targetPrototype.$$vuejsext.watch || {};
-    targetPrototype.$$vuejsext.watch[key] = function () { 
-        this.$data.zyx123values[key] = this[key];
+    desc.set = function () {
+        setter && setter.apply(this, arguments);
+        // this[key] !== arguments[0] && (this[key] = arguments[0]);
     }
 	decorate(targetPrototype, key);
     targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {}; 
@@ -221,13 +243,14 @@ var vueInjectorDecorator = (target) => explorePrototype(target, (prototypeClass)
     })(target);
 });
 
-var extendClass = (target, init: (data) => void) => {
+var extendClass = (target, init: (instance) => void) => {
     var result = (new Function('constructor', `return function ${target.name}() { constructor(this, arguments); };`))(
         function (instance, args) {
-            var d:any = { zyx123values: instance };
+            var d:any = { zyx123values: {}};
+            d.$$targetInstance = instance;
             instance.$vuedata = d;
             var instance = target.apply(instance, args) || instance;
-            init(d);
+            init(instance);
         });
     Object.setPrototypeOf(result, target);
     function __() { this.constructor = result; }
@@ -238,7 +261,9 @@ var extendClass = (target, init: (data) => void) => {
 var ComponentDecorator = (options: {name: string; html: Promise<string>}) => (target) => {
     target.$$vuejs = target.$$vuejs || {};
     target.$$vuejs.isComponent = true;
-    var result = extendClass(target, (data) => {});
+    var result = extendClass(target, (instance) => {
+        config.initValues(instance.$vuedata);
+    });
     vueInjectorDecorator(result);
     
     var config = GetVueConfig(options)(target);
@@ -262,6 +287,7 @@ var VueDecorator = (options: {el: string, html: Promise<string>}) => (target) =>
     target.$$vuejs = target.$$vuejs || {};
     target.$$vuejs.isVue = true;
     var result = extendClass(target, (instance) => {
+        config.initValues(instance.$vuedata);
         config.setVueInstance(instance.$vuedata, config.html.then(template => new Vue(Object.assign({}, config, {
             el: config.el,
             data: instance.$vuedata,
