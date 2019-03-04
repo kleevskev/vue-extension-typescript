@@ -42,17 +42,31 @@ var __metadata = (this && this.__metadata) || function (k, v) {
         var getter = desc && desc.get;
         var setter = desc && desc.set;
         desc.get = function () {
-            return this.$vuedata[key] = getter && getter.apply(this, arguments) || this.$vuedata[key];
+            return getter ? getter.apply(this, arguments) : this.$vuedata.zyx123values[key];
         };
         desc.set = function () {
             setter && setter.apply(this, arguments);
-            this.$vuedata[key] !== arguments[0] && (this.$vuedata[key] = arguments[0]);
+            this.$vuedata.zyx123values[key] = setter ? this[key] : arguments[0];
+            // this.$vuedata[key] !== arguments[0] && (this.$vuedata[key] = arguments[0]);
         };
         targetPrototype.__vuejsext = targetPrototype.__vuejsext || {};
         targetPrototype.__vuejsext.data = targetPrototype.__vuejsext.data || {};
-        targetPrototype.__vuejsext.data[key] = (function (data, instance) {
-            data[key] = instance[key] != undefined ? instance[key] : null;
-        });
+        targetPrototype.__vuejsext.data[key] = {
+            beforeCreate: function (data) {
+                data.zyx123values = data.zyx123values || {};
+                data.zyx123values[key] = data._instance_[key] != undefined ? data._instance_[key] : null;
+            },
+            beforeMount: function (vueInstance) {
+                var descriptor = {};
+                descriptor.set = function () {
+                    vueInstance.$data._instance_[key] = arguments[0];
+                };
+                descriptor.get = function () {
+                    return vueInstance.$data.zyx123values[key];
+                };
+                Object.defineProperty(vueInstance, key, descriptor);
+            }
+        };
         return desc;
     };
     var computedDecorator = function (targetPrototype, key) {
@@ -105,13 +119,20 @@ var __metadata = (this && this.__metadata) || function (k, v) {
         var methods = target.prototype.__vuejsext.methods || {};
         var html = options.html;
         var el = options.el;
-        Object.keys(data).forEach(function (key) {
-            var _super = watch[key];
-            watch[key] = function () {
-                _super && _super.apply(this, arguments);
-                this.$data._instance_[key] = this[key];
-            };
-        });
+        var initValues = function (d) {
+            Object.keys(data).forEach(function (key) { return data[key].beforeCreate(d); });
+        };
+        var beforeMount = function () {
+            var _this = this;
+            Object.keys(data).forEach(function (key) { return data[key].beforeMount(_this); });
+        };
+        // // Object.keys(data).forEach((key) => {
+        // //     var _super = watch[key];
+        // //     watch[key] = function () {
+        // //         _super && _super.apply(this, arguments);
+        // //         this.$data._instance_[key] = this[key];
+        // //     }
+        // // });
         return {
             data: data,
             computed: computed,
@@ -120,14 +141,16 @@ var __metadata = (this && this.__metadata) || function (k, v) {
             methods: methods,
             html: html,
             el: el,
-            mapper: function (d, instance) { return Object.keys(data).forEach(function (key) { return data[key](d, instance); }); },
+            initValues: initValues,
+            beforeMount: beforeMount,
+            // mapper: (instance) => Object.keys(data).forEach((key) => data[key](instance)),
             setVueInstance: function (d, vi) { return d.$vuejs = vi; }
         };
     }; };
     var ComponentDecorator = function (options) { return function (target) {
         var config = GetVueConfig(options)(target);
         delete config.el;
-        Vue.component(options.name, function (resolve, reject) {
+        Vue.component(options.name, function (resolve) {
             config.html.then(function (template) { return resolve(Object.assign({}, config, {
                 template: template,
                 data: function () {
@@ -135,7 +158,8 @@ var __metadata = (this && this.__metadata) || function (k, v) {
                     var d = {};
                     d._instance_ = instance;
                     instance.$vuedata = d;
-                    config.mapper(d, instance);
+                    config.initValues(d);
+                    // config.mapper(instance);
                     config.setVueInstance(d, Promise.resolve(this));
                     return d;
                 }
@@ -149,7 +173,8 @@ var __metadata = (this && this.__metadata) || function (k, v) {
             d._instance_ = instance;
             instance.$vuedata = d;
             var instance = target.apply(instance, args) || instance;
-            config.mapper(d, instance);
+            config.initValues(d);
+            // config.mapper(instance);
             config.setVueInstance(d, config.html.then(function (template) { return new Vue(Object.assign({}, config, {
                 el: config.el || createElement(template),
                 data: d,

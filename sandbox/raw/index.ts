@@ -25,17 +25,31 @@ var dataDecorator = (targetPrototype, key, desc?) => {
     var getter = desc && desc.get;
     var setter = desc && desc.set;
     desc.get = function () {
-        return this.$vuedata[key] = getter && getter.apply(this, arguments) || this.$vuedata[key];
+        return getter ? getter.apply(this, arguments) : this.$vuedata.zyx123values[key];
     }
     desc.set = function () {
         setter && setter.apply(this, arguments);
-        this.$vuedata[key] !== arguments[0] && (this.$vuedata[key] = arguments[0]);
+        this.$vuedata.zyx123values[key] = setter ? this[key] : arguments[0];
+        // this.$vuedata[key] !== arguments[0] && (this.$vuedata[key] = arguments[0]);
     }
     targetPrototype.__vuejsext = targetPrototype.__vuejsext || {}; 
     targetPrototype.__vuejsext.data = targetPrototype.__vuejsext.data || {};
-    targetPrototype.__vuejsext.data[key] = ((data, instance) => { 
-        data[key] = instance[key] != undefined ? instance[key] : null; 
-    });
+    targetPrototype.__vuejsext.data[key] = { 
+        beforeCreate: data => {
+            data.zyx123values = data.zyx123values || {};
+            data.zyx123values[key] = data._instance_[key] != undefined ? data._instance_[key] : null; 
+        },
+        beforeMount: vueInstance => { 
+            var descriptor: any = {};
+            descriptor.set = function () { 
+                vueInstance.$data._instance_[key] = arguments[0];
+            }
+            descriptor.get = function () { 
+                return vueInstance.$data.zyx123values[key];
+            }
+            Object.defineProperty(vueInstance, key, descriptor);
+        }
+    };
     return desc;
 }
 
@@ -94,14 +108,20 @@ var GetVueConfig = (options: {el?: string; name?: string; html: Promise<string>}
     var methods  = target.prototype.__vuejsext.methods || {};
     var html = options.html;
     var el = options.el;
+    var initValues = function (d) {
+        Object.keys(data).forEach((key) => data[key].beforeCreate(d));
+    }
+    var beforeMount = function () {
+        Object.keys(data).forEach((key) => data[key].beforeMount(this));
+    }
     
-    Object.keys(data).forEach((key) => {
-        var _super = watch[key];
-        watch[key] = function () {
-            _super && _super.apply(this, arguments);
-            this.$data._instance_[key] = this[key];
-        }
-    });
+    // // Object.keys(data).forEach((key) => {
+    // //     var _super = watch[key];
+    // //     watch[key] = function () {
+    // //         _super && _super.apply(this, arguments);
+    // //         this.$data._instance_[key] = this[key];
+    // //     }
+    // // });
 
     return {
         data: data,
@@ -111,7 +131,9 @@ var GetVueConfig = (options: {el?: string; name?: string; html: Promise<string>}
         methods: methods,
         html: html,
         el: el,
-        mapper: (d, instance) => Object.keys(data).forEach((key) => data[key](d, instance)),
+        initValues: initValues,
+        beforeMount: beforeMount,
+        // mapper: (instance) => Object.keys(data).forEach((key) => data[key](instance)),
         setVueInstance: (d, vi: Promise<any>) => d.$vuejs = vi
     };
 }
@@ -120,7 +142,7 @@ var ComponentDecorator = (options: {name: string; html: Promise<string>}) => (ta
     var config = GetVueConfig(options)(target);
     delete config.el;
 
-    Vue.component(options.name, (resolve, reject) => {
+    Vue.component(options.name, (resolve) => {
         config.html.then(template => resolve(Object.assign({}, config, {
             template: template,
             data: function () {
@@ -128,7 +150,8 @@ var ComponentDecorator = (options: {name: string; html: Promise<string>}) => (ta
                 var d: any = {};
                 d._instance_ = instance;
                 instance.$vuedata = d;
-                config.mapper(d, instance);
+                config.initValues(d);
+                // config.mapper(instance);
                 config.setVueInstance(d, Promise.resolve(this));
                 return d;
             }
@@ -145,7 +168,8 @@ var VueDecorator = (options: {el: string, html: Promise<string>}) => (target) =>
             d._instance_ = instance;
             instance.$vuedata = d;
             var instance = target.apply(instance, args) || instance;
-            config.mapper(d, instance);
+            config.initValues(d);
+            // config.mapper(instance);
             config.setVueInstance(d, config.html.then(template => new Vue(Object.assign({}, config, {
                 el: config.el || createElement(template),
                 data: d,
@@ -204,3 +228,4 @@ class App {
 }
 
 new App();
+
