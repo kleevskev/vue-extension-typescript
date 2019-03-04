@@ -1,6 +1,71 @@
 declare let Vue: any;
 
-export function createElement(html: string): Element {
+var context: Window & { Reflect: { metadata: (k: string, v: any[]) => any, decorate: (decorators, target, key, desc) => any } } = window as any;
+context.Reflect = context.Reflect || <any>{}; 
+context.Reflect.metadata = (k, v) => {
+    return function (target) {
+        target.$$ioc = target.$$ioc || {};
+        target.$$ioc.metadata = {};
+        target.$$ioc.metadata[k] = v;
+    };
+};
+
+var explorePrototype = (target, callback: (target) => void) => {
+    var classTarget = target;
+    while(classTarget && classTarget.constructor !== classTarget) {
+        callback(classTarget);
+        classTarget = Object.getPrototypeOf(classTarget);
+    }
+}
+
+class Container {
+    createService<T>(target: Function & { prototype: T }): T 
+    createService<T>(target: Function & { prototype: T }, context): T 
+    createService<T>(target: Function & { prototype: T }, context?): T {
+        var trgt:any = target;
+        return trgt.$$ioc && trgt.$$ioc.builder && trgt.$$ioc.builder(this, trgt, context || {}) || new trgt();
+    }
+}
+
+var factoryDecorator = (callback: <T>(container: Container, target: Function & { prototype: T }, context)=>T) => (target) => {
+    target.$$ioc = target.$$ioc || {};
+    target.$$ioc.builder = callback;
+}
+
+var injectorDecorator = <TKey>(options: { 
+    key: { prototype: TKey }, 
+    callback: <T>(container, target: { prototype: TKey }, context) => T
+}) => (target) => {
+    return factoryDecorator((container, key, context) => {
+        var trgt: any = target;
+        var param = (trgt.$$ioc && trgt.$$ioc.metadata && trgt.$$ioc.metadata["design:paramtypes"] || [])
+            .map((type) => options.callback(container, type, context));
+
+	    var instance = trgt ? 
+			(param.length <= 0 ? 
+				new trgt() : 
+				new (trgt.bind.apply(trgt, [null].concat(param)))()
+            ): undefined;
+            
+        return instance;
+    })(options.key);
+}
+
+var serviceDecorator = <TKey>(options: { key: { prototype: TKey } }) => injectorDecorator({
+    key: options.key,
+    callback: (container, type, context) => { 
+        context.created = context.created || [];
+        var result = context.created.filter(_ => _.key === type).map(_ => _.value)[0];
+        if (!result) {
+            result = container.createService(type, context);
+            context.created.push({ key: type, value: result });
+        }
+
+        return result;
+    }
+});
+
+function createElement(html: string): Element {
 	html = html.trim();
 	var isTr = html.match(/^<tr/);
 	var isTd = html.match(/^<td/);
@@ -174,7 +239,33 @@ var GetVueConfig = (options: {el?: string; name?: string; html: Promise<string>}
     };
 }
 
+var vueInjectorDecorator = (target) => explorePrototype(target, (prototypeClass) => {
+    injectorDecorator({
+        key: prototypeClass,
+        callback: (container, type: any, context) => { 
+            context.created = context.created || [];
+            var result = context.created.filter(_ => _.key === type).map(_ => _.value)[0];
+            if (!result) {
+                if (type && type.$$vuejs && type.$$vuejs.isComponent) {
+
+                } else if (type && type.$$vuejs && type.$$vuejs.isVue) {
+                    result = container.createService(type, context);
+                } else {
+                    result = container.createService(type, context);
+                    context.created.push({ key: type, value: result });
+                }
+            }
+    
+            return result;
+        }
+    })(target);
+});
+
 var ComponentDecorator = (options: {name: string; html: Promise<string>}) => (target) => {
+    target.$$vuejs = target.$$vuejs || {};
+    target.$$vuejs.isComponent = true;
+    //vueInjectorDecorator(target);
+    
     var config = GetVueConfig(options)(target);
     delete config.el;
 
@@ -195,6 +286,10 @@ var ComponentDecorator = (options: {name: string; html: Promise<string>}) => (ta
 }
 
 var VueDecorator = (options: {el: string, html: Promise<string>}) => (target) => {
+    target.$$vuejs = target.$$vuejs || {};
+    target.$$vuejs.isVue = true;
+    //vueInjectorDecorator(target);
+
     var config = GetVueConfig(options)(target);
 
     var result = (new Function('constructor', `return function ${target.name}() { constructor(this, arguments); };`))(
@@ -318,4 +413,5 @@ class App {
 }
 
 new App();
+//new Container().createService(App);
 
