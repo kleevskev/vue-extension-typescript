@@ -11,9 +11,9 @@ context.Reflect.metadata = (k, v) => {
 };
 
 var explorePrototype = (target, callback: (target) => void) => {
-    var classTarget = target;
+    var classTarget = Object.getPrototypeOf(target);
     while(classTarget && classTarget.constructor !== classTarget) {
-        callback(classTarget);
+        callback(classTarget.constructor);
         classTarget = Object.getPrototypeOf(classTarget);
     }
 }
@@ -196,17 +196,19 @@ var propDecorator = (targetPrototype, key, desc?) => {
 
 var setDefaultConfig = (target) => {
 	var targetPrototype = target.prototype;
-	Object.keys(targetPrototype).forEach(key => {
-		if (!isDecorate(targetPrototype, key)) {
-			var descriptor = Object.getOwnPropertyDescriptor(targetPrototype, key);
-			if (descriptor.get && descriptor.set) {
-				Object.defineProperty(targetPrototype, key, dataDecorator(targetPrototype, key, descriptor));
-			} else if (descriptor.set) {
-				Object.defineProperty(targetPrototype, key, propDecorator(targetPrototype, key, descriptor));
-			} else if (descriptor.get) {
-				computedDecorator(targetPrototype, key);
-			}
-		}
+    Object.keys(targetPrototype)
+        .filter(key => key.indexOf("$") !== 0)
+        .forEach(key => {
+            if (!isDecorate(targetPrototype, key)) {
+                var descriptor = Object.getOwnPropertyDescriptor(targetPrototype, key);
+                if (descriptor.get && descriptor.set) {
+                    Object.defineProperty(targetPrototype, key, dataDecorator(targetPrototype, key, descriptor));
+                } else if (descriptor.set) {
+                    Object.defineProperty(targetPrototype, key, propDecorator(targetPrototype, key, descriptor));
+                } else if (descriptor.get) {
+                    computedDecorator(targetPrototype, key);
+                }
+            }
 	});
 }
 
@@ -264,7 +266,7 @@ var vueInjectorDecorator = (target) => explorePrototype(target, (prototypeClass)
 var ComponentDecorator = (options: {name: string; html: Promise<string>}) => (target) => {
     target.$$vuejs = target.$$vuejs || {};
     target.$$vuejs.isComponent = true;
-    //vueInjectorDecorator(target);
+    vueInjectorDecorator(target);
     
     var config = GetVueConfig(options)(target);
     delete config.el;
@@ -288,7 +290,7 @@ var ComponentDecorator = (options: {name: string; html: Promise<string>}) => (ta
 var VueDecorator = (options: {el: string, html: Promise<string>}) => (target) => {
     target.$$vuejs = target.$$vuejs || {};
     target.$$vuejs.isVue = true;
-    //vueInjectorDecorator(target);
+    vueInjectorDecorator(target);
 
     var config = GetVueConfig(options)(target);
 
@@ -412,6 +414,5 @@ class App {
     }
 }
 
-new App();
-//new Container().createService(App);
+new Container().createService(App);
 

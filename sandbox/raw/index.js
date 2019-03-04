@@ -17,9 +17,9 @@ context.Reflect.metadata = function (k, v) {
     };
 };
 var explorePrototype = function (target, callback) {
-    var classTarget = target;
+    var classTarget = Object.getPrototypeOf(target);
     while (classTarget && classTarget.constructor !== classTarget) {
-        callback(classTarget);
+        callback(classTarget.constructor);
         classTarget = Object.getPrototypeOf(classTarget);
     }
 };
@@ -175,7 +175,9 @@ var propDecorator = function (targetPrototype, key, desc) {
 };
 var setDefaultConfig = function (target) {
     var targetPrototype = target.prototype;
-    Object.keys(targetPrototype).forEach(function (key) {
+    Object.keys(targetPrototype)
+        .filter(function (key) { return key.indexOf("$") !== 0; })
+        .forEach(function (key) {
         if (!isDecorate(targetPrototype, key)) {
             var descriptor = Object.getOwnPropertyDescriptor(targetPrototype, key);
             if (descriptor.get && descriptor.set) {
@@ -244,7 +246,7 @@ var vueInjectorDecorator = function (target) { return explorePrototype(target, f
 var ComponentDecorator = function (options) { return function (target) {
     target.$$vuejs = target.$$vuejs || {};
     target.$$vuejs.isComponent = true;
-    //vueInjectorDecorator(target);
+    vueInjectorDecorator(target);
     var config = GetVueConfig(options)(target);
     delete config.el;
     Vue.component(options.name, function (resolve) {
@@ -265,7 +267,7 @@ var ComponentDecorator = function (options) { return function (target) {
 var VueDecorator = function (options) { return function (target) {
     target.$$vuejs = target.$$vuejs || {};
     target.$$vuejs.isVue = true;
-    //vueInjectorDecorator(target);
+    vueInjectorDecorator(target);
     var config = GetVueConfig(options)(target);
     var result = (new Function('constructor', "return function " + target.name + "() { constructor(this, arguments); };"))(function (instance, args) {
         var d = {};
@@ -441,5 +443,4 @@ var App = /** @class */ (function () {
     ], App);
     return App;
 }());
-new App();
-//new Container().createService(App);
+new Container().createService(App);
