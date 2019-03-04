@@ -42,56 +42,76 @@ var __metadata = (this && this.__metadata) || function (k, v) {
         var getter = desc && desc.get;
         var setter = desc && desc.set;
         desc.get = function () {
-            return getter ? getter.apply(this, arguments) : this.$vuedata.zyx123values[key];
+            var value = getter ? getter.apply(this, arguments) : this.$vuedata.zyx123values[key];
+            if (value !== this.$vuedata.zyx123values[key]) {
+                this.$vuedata.zyx123values[key] = value;
+            }
+            return value;
         };
         desc.set = function () {
             setter && setter.apply(this, arguments);
             this.$vuedata.zyx123values[key] = setter ? this[key] : arguments[0];
-            // this.$vuedata[key] !== arguments[0] && (this.$vuedata[key] = arguments[0]);
         };
-        targetPrototype.__vuejsext = targetPrototype.__vuejsext || {};
-        targetPrototype.__vuejsext.data = targetPrototype.__vuejsext.data || {};
-        targetPrototype.__vuejsext.data[key] = {
-            beforeCreate: function (data) {
-                data.zyx123values = data.zyx123values || {};
-                data.zyx123values[key] = data._instance_[key] != undefined ? data._instance_[key] : null;
-            },
-            beforeMount: function (vueInstance) {
-                var descriptor = {};
-                descriptor.set = function () {
-                    vueInstance.$data._instance_[key] = arguments[0];
-                };
-                descriptor.get = function () {
-                    return vueInstance.$data.zyx123values[key];
-                };
-                Object.defineProperty(vueInstance, key, descriptor);
-            }
-        };
+        init(function (data) {
+            data.zyx123values = data.zyx123values || {};
+            data.zyx123values[key] = data.$$targetInstance[key] != undefined ? data.$$targetInstance[key] : null;
+        })(targetPrototype);
+        beforeMount(function (vueInstance) {
+            var descriptor = {};
+            descriptor.set = function () {
+                vueInstance.$data.$$targetInstance[key] = arguments[0];
+            };
+            descriptor.get = function () {
+                return vueInstance.$data.zyx123values[key];
+            };
+            Object.defineProperty(vueInstance, key, descriptor);
+        })(targetPrototype);
+        decorate(targetPrototype, key);
         return desc;
     };
+    var decorate = function (targetPrototype, key) {
+        targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {};
+        targetPrototype.$$vuejsext.decorate = targetPrototype.$$vuejsext.decorate || {};
+        targetPrototype.$$vuejsext.decorate[key] = true;
+    };
+    var isDecorate = function (targetPrototype, key) { return targetPrototype.$$vuejsext && targetPrototype.$$vuejsext.decorate && targetPrototype.$$vuejsext.decorate[key]; };
+    var init = function (callback) { return function (targetPrototype) {
+        targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {};
+        targetPrototype.$$vuejsext.init = targetPrototype.$$vuejsext.init || [];
+        targetPrototype.$$vuejsext.init.push(callback);
+    }; };
+    var beforeMount = function (callback) { return function (targetPrototype) {
+        targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {};
+        targetPrototype.$$vuejsext.beforeMount = targetPrototype.$$vuejsext.beforeMount || [];
+        targetPrototype.$$vuejsext.beforeMount.push(callback);
+    }; };
     var computedDecorator = function (targetPrototype, key) {
-        targetPrototype.__vuejsext = targetPrototype.__vuejsext || {};
-        targetPrototype.__vuejsext.computed = targetPrototype.__vuejsext.computed || {};
-        targetPrototype.__vuejsext.computed[key] = function () {
-            return this.$data._instance_[key];
+        decorate(targetPrototype, key);
+        targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {};
+        targetPrototype.$$vuejsext.computed = targetPrototype.$$vuejsext.computed || {};
+        targetPrototype.$$vuejsext.computed[key] = function () {
+            return this.$data.$$targetInstance[key];
         };
     };
-    var watchDecorator = function (name) { return function (targetPrototype, key) {
-        targetPrototype.__vuejsext = targetPrototype.__vuejsext || {};
-        targetPrototype.__vuejsext.watch = targetPrototype.__vuejsext.watch || {};
-        targetPrototype.__vuejsext.watch[name] = function () {
-            this.$data._instance_[key]();
+    var watchDecorator = function (name) { return function (targetPrototype, key, desc) {
+        decorate(targetPrototype, key);
+        targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {};
+        targetPrototype.$$vuejsext.watch = targetPrototype.$$vuejsext.watch || {};
+        targetPrototype.$$vuejsext.watch["zyx123values." + name] = function () {
+            this.$data.$$targetInstance[key]();
         };
     }; };
-    var methodDecorator = function (targetPrototype, key) {
-        targetPrototype.__vuejsext = targetPrototype.__vuejsext || {};
-        targetPrototype.__vuejsext.methods = targetPrototype.__vuejsext.methods || {};
-        targetPrototype.__vuejsext.methods[key] = function () {
-            this.$data._instance_[key].apply(this.$data._instance_, arguments);
+    var methodDecorator = function (targetPrototype, key, desc) {
+        decorate(targetPrototype, key);
+        targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {};
+        targetPrototype.$$vuejsext.methods = targetPrototype.$$vuejsext.methods || {};
+        targetPrototype.$$vuejsext.methods[key] = function () {
+            this.$data.$$targetInstance[key].apply(this.$data.$$targetInstance, arguments);
         };
     };
     var eventDecorator = function (targetPrototype, key, desc) {
-        methodDecorator(targetPrototype, key);
+        decorate(targetPrototype, key);
+        methodDecorator(targetPrototype, key, desc);
         var _super = desc.value;
         desc.value = function () {
             var result = _super.apply(this, arguments);
@@ -106,33 +126,46 @@ var __metadata = (this && this.__metadata) || function (k, v) {
             setter && setter.apply(this, arguments);
             this.$vuedata[key] !== arguments[0] && (this.$vuedata[key] = arguments[0]);
         };
-        targetPrototype.__vuejsext = targetPrototype.__vuejsext || {};
-        targetPrototype.__vuejsext.props = targetPrototype.__vuejsext.props || {};
-        targetPrototype.__vuejsext.props[key] = {};
+        decorate(targetPrototype, key);
+        targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {};
+        targetPrototype.$$vuejsext.props = targetPrototype.$$vuejsext.props || {};
+        targetPrototype.$$vuejsext.props[key] = {};
+        return desc;
+    };
+    var setDefaultConfig = function (target) {
+        var targetPrototype = target.prototype;
+        Object.keys(targetPrototype).forEach(function (key) {
+            if (!isDecorate(targetPrototype, key)) {
+                var descriptor = Object.getOwnPropertyDescriptor(targetPrototype, key);
+                if (descriptor.get && descriptor.set) {
+                    Object.defineProperty(targetPrototype, key, dataDecorator(targetPrototype, key, descriptor));
+                }
+                else if (descriptor.set) {
+                    Object.defineProperty(targetPrototype, key, propDecorator(targetPrototype, key, descriptor));
+                }
+                else if (descriptor.get) {
+                    computedDecorator(targetPrototype, key);
+                }
+            }
+        });
     };
     var GetVueConfig = function (options) { return function (target) {
-        target.prototype.__vuejsext = target.prototype.__vuejsext || {};
-        var data = target.prototype.__vuejsext.data || {};
-        var computed = target.prototype.__vuejsext.computed || {};
-        var watch = target.prototype.__vuejsext.watch || {};
-        var props = target.prototype.__vuejsext.props || {};
-        var methods = target.prototype.__vuejsext.methods || {};
+        setDefaultConfig(target);
+        target.prototype.$$vuejsext = target.prototype.$$vuejsext || {};
+        var data = target.prototype.$$vuejsext.data || {};
+        var computed = target.prototype.$$vuejsext.computed || {};
+        var watch = target.prototype.$$vuejsext.watch || {};
+        var props = target.prototype.$$vuejsext.props || {};
+        var methods = target.prototype.$$vuejsext.methods || {};
         var html = options.html;
         var el = options.el;
-        var initValues = function (d) {
-            Object.keys(data).forEach(function (key) { return data[key].beforeCreate(d); });
-        };
+        var inits = target.prototype.$$vuejsext.init || [];
+        var beforeMounts = target.prototype.$$vuejsext.beforeMount || [];
+        var initValues = function (d) { return inits.forEach(function (fn) { return fn(d); }); };
         var beforeMount = function () {
             var _this = this;
-            Object.keys(data).forEach(function (key) { return data[key].beforeMount(_this); });
+            beforeMounts.forEach(function (fn) { return fn(_this); });
         };
-        // // Object.keys(data).forEach((key) => {
-        // //     var _super = watch[key];
-        // //     watch[key] = function () {
-        // //         _super && _super.apply(this, arguments);
-        // //         this.$data._instance_[key] = this[key];
-        // //     }
-        // // });
         return {
             data: data,
             computed: computed,
@@ -143,7 +176,6 @@ var __metadata = (this && this.__metadata) || function (k, v) {
             el: el,
             initValues: initValues,
             beforeMount: beforeMount,
-            // mapper: (instance) => Object.keys(data).forEach((key) => data[key](instance)),
             setVueInstance: function (d, vi) { return d.$vuejs = vi; }
         };
     }; };
@@ -156,10 +188,9 @@ var __metadata = (this && this.__metadata) || function (k, v) {
                 data: function () {
                     var instance = new target();
                     var d = {};
-                    d._instance_ = instance;
+                    d.$$targetInstance = instance;
                     instance.$vuedata = d;
                     config.initValues(d);
-                    // config.mapper(instance);
                     config.setVueInstance(d, Promise.resolve(this));
                     return d;
                 }
@@ -170,11 +201,10 @@ var __metadata = (this && this.__metadata) || function (k, v) {
         var config = GetVueConfig(options)(target);
         var result = (new Function('constructor', "return function " + target.name + "() { constructor(this, arguments); };"))(function (instance, args) {
             var d = {};
-            d._instance_ = instance;
+            d.$$targetInstance = instance;
             instance.$vuedata = d;
             var instance = target.apply(instance, args) || instance;
             config.initValues(d);
-            // config.mapper(instance);
             config.setVueInstance(d, config.html.then(function (template) { return new Vue(Object.assign({}, config, {
                 el: config.el || createElement(template),
                 data: d,
@@ -237,6 +267,92 @@ var __metadata = (this && this.__metadata) || function (k, v) {
         ], Test);
         return Test;
     }());
+    var Property = /** @class */ (function () {
+        function Property() {
+        }
+        Object.defineProperty(Property.prototype, "id", {
+            set: function (value) { },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Property.prototype, "lastName", {
+            get: function () { return this._lastName; },
+            set: function (value) { this._lastName = value; },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Property.prototype, "firstName", {
+            get: function () { return this._firstName; },
+            set: function (value) { this._firstName = value; },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Property.prototype, "fullName", {
+            get: function () { return this.lastName + " " + this.firstName; },
+            enumerable: true,
+            configurable: true
+        });
+        __decorate([
+            propDecorator,
+            __metadata("design:type", Number),
+            __metadata("design:paramtypes", [Number])
+        ], Property.prototype, "id", null);
+        __decorate([
+            dataDecorator,
+            __metadata("design:type", String),
+            __metadata("design:paramtypes", [String])
+        ], Property.prototype, "lastName", null);
+        __decorate([
+            dataDecorator,
+            __metadata("design:type", String),
+            __metadata("design:paramtypes", [String])
+        ], Property.prototype, "firstName", null);
+        __decorate([
+            computedDecorator,
+            __metadata("design:type", String),
+            __metadata("design:paramtypes", [])
+        ], Property.prototype, "fullName", null);
+        Property = __decorate([
+            ComponentDecorator({
+                name: "property",
+                html: Promise.resolve("\n        <div>\n\t\t\tProperty <br/>\n            <input v-model=\"lastName\"/> <br/>\n            <input v-model=\"firstName\"/> <br/>\n            <span>id({{id}}) : {{fullName}}</span>\n        </div>\n    ")
+            })
+        ], Property);
+        return Property;
+    }());
+    var Defaut = /** @class */ (function () {
+        function Defaut() {
+        }
+        Object.defineProperty(Defaut.prototype, "id", {
+            set: function (value) { },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Defaut.prototype, "lastName", {
+            get: function () { return this._lastName; },
+            set: function (value) { this._lastName = value; },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Defaut.prototype, "firstName", {
+            get: function () { return this._firstName; },
+            set: function (value) { this._firstName = value; },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Defaut.prototype, "fullName", {
+            get: function () { return this.lastName + " " + this.firstName; },
+            enumerable: true,
+            configurable: true
+        });
+        Defaut = __decorate([
+            ComponentDecorator({
+                name: "defaut",
+                html: Promise.resolve("\n        <div>\n\t\t\tDefaut <br/>\n            <input v-model=\"lastName\"/> <br/>\n            <input v-model=\"firstName\"/> <br/>\n            <span>id({{id}}) : {{fullName}}</span>\n        </div>\n    ")
+            })
+        ], Defaut);
+        return Defaut;
+    }());
     var App = /** @class */ (function () {
         function App() {
         }
@@ -252,7 +368,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
         App = __decorate([
             VueDecorator({
                 el: "#app",
-                html: Promise.resolve("\n    <div>\n        <info id='1234' @change=\"log\"/>\n    </div>\n    ")
+                html: Promise.resolve("\n    <div>\n        <info id='1234' @change=\"log\"/>\n\t\t<property id='75' />\n\t\t<defaut id='5678' />\n    </div>\n    ")
             })
         ], App);
         return App;
