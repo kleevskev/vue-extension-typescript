@@ -3,12 +3,12 @@ declare var serviceDecorator: <TKey>(options: {
         prototype: TKey;
     };
 }) => (target: any) => void;
-declare var dataDecorator: (targetPrototype: any, key: any, desc?: any) => any;
+declare var dataDecorator: (targetPrototype: any, key: any, desc?: any) => void;
 declare var computedDecorator: (targetPrototype: any, key: any) => void;
 declare var watchDecorator: (name: string) => (targetPrototype: any, key: any, desc: any) => void;
 declare var methodDecorator: (targetPrototype: any, key: any, desc: any) => void;
 declare var eventDecorator: (targetPrototype: any, key: any, desc: any) => void;
-declare var propDecorator: (targetPrototype: any, key: any, desc?: any) => any;
+declare var propDecorator: (targetPrototype: any, key: any, desc?: any) => void;
 declare var ComponentDecorator: (options: {
     name: string;
     html: Promise<string>;

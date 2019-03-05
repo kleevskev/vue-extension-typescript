@@ -12,11 +12,10 @@ class Base {}
     </div>`)
 })
 class TextBox {
-    private _data;
-    @props
+    private _data = null;
     private set value(v) { this.data = v; }
-    @data
-    private data = null;
+    private set data(v) { this._data = v; };
+	private get data() { return this._data; };
 
     @event
     private input(event) {

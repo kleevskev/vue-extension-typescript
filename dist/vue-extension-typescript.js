@@ -154,9 +154,6 @@ __MODE__ = undefined;
 	    });
 	    exports.Service = serviceDecorator;
 	    var dataDecorator = (targetPrototype, key, desc) => {
-	        var desc = desc || {};
-	        var getter = desc && desc.get;
-	        var setter = desc && desc.set;
 	        targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {};
 	        targetPrototype.$$vuejsext.computed = targetPrototype.$$vuejsext.computed || {};
 	        targetPrototype.$$vuejsext.computed[key] = {
@@ -168,7 +165,6 @@ __MODE__ = undefined;
 	            }
 	        };
 	        decorate(targetPrototype, key);
-	        return desc;
 	    };
 	    exports.data = dataDecorator;
 	    var decorate = (targetPrototype, key) => {
@@ -205,7 +201,7 @@ __MODE__ = undefined;
 	        targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {};
 	        targetPrototype.$$vuejsext.methods = targetPrototype.$$vuejsext.methods || {};
 	        targetPrototype.$$vuejsext.methods[key] = function () {
-	            this.$data.$$targetInstance[key].apply(this.$data.$$targetInstance, arguments);
+	            this.$data.zyx123values[key].apply(this.$data.zyx123values, arguments);
 	        };
 	    };
 	    exports.methods = methodDecorator;
@@ -215,14 +211,12 @@ __MODE__ = undefined;
 	        var _super = desc.value;
 	        desc.value = function () {
 	            var result = _super.apply(this, arguments);
-	            this.$vuedata.$vuejs && this.$vuedata.$vuejs.then(vuejs => vuejs.$emit(key, result));
+	            this.$vuejs && this.$vuejs.then(vuejs => vuejs.$emit(key, result));
 	            return result;
 	        };
 	    };
 	    exports.event = eventDecorator;
 	    var propDecorator = (targetPrototype, key, desc) => {
-	        var desc = desc || {};
-	        var setter = desc && desc.set;
 	        targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {};
 	        targetPrototype.$$vuejsext.watch = targetPrototype.$$vuejsext.watch || {};
 	        targetPrototype.$$vuejsext.watch[key] = function () {
@@ -232,7 +226,6 @@ __MODE__ = undefined;
 	        targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {};
 	        targetPrototype.$$vuejsext.props = targetPrototype.$$vuejsext.props || {};
 	        targetPrototype.$$vuejsext.props[key] = {};
-	        return desc;
 	    };
 	    exports.props = propDecorator;
 	    var setDefaultConfig = (target) => {
@@ -243,10 +236,10 @@ __MODE__ = undefined;
 	            if (!isDecorate(targetPrototype, key)) {
 	                var descriptor = Object.getOwnPropertyDescriptor(targetPrototype, key);
 	                if (descriptor.get && descriptor.set) {
-	                    Object.defineProperty(targetPrototype, key, dataDecorator(targetPrototype, key, descriptor));
+	                    dataDecorator(targetPrototype, key, descriptor);
 	                }
 	                else if (descriptor.set) {
-	                    Object.defineProperty(targetPrototype, key, propDecorator(targetPrototype, key, descriptor));
+	                    propDecorator(targetPrototype, key, descriptor);
 	                }
 	                else if (descriptor.get) {
 	                    computedDecorator(targetPrototype, key);
@@ -278,7 +271,7 @@ __MODE__ = undefined;
 	            el: el,
 	            initValues: initValues,
 	            beforeMount: beforeMount,
-	            setVueInstance: (d, vi) => d.$vuejs = vi
+	            setVueInstance: (instance, vi) => instance.$vuejs = vi
 	        };
 	    };
 	    var vueInjectorDecorator = (target) => explorePrototype(target, (prototypeClass) => {
@@ -308,6 +301,7 @@ __MODE__ = undefined;
 	            instance.$vuedata = d;
 	            var instance = target.apply(instance, args) || instance;
 	            init(d);
+	            return instance;
 	        });
 	        Object.setPrototypeOf(result, target);
 	        function __() { this.constructor = result; }
@@ -326,7 +320,7 @@ __MODE__ = undefined;
 	                template: template,
 	                data: function () {
 	                    var instance = container.createService(result, containerContext);
-	                    config.setVueInstance(instance.$vuedata, Promise.resolve(this));
+	                    config.setVueInstance(instance, Promise.resolve(this));
 	                    return instance.$vuedata;
 	                }
 	            })));
@@ -337,10 +331,10 @@ __MODE__ = undefined;
 	    var VueDecorator = (options) => (target) => {
 	        target.$$vuejs = target.$$vuejs || {};
 	        target.$$vuejs.isVue = true;
-	        var result = extendClass(target, (instance) => {
-	            config.setVueInstance(instance.$vuedata, config.html.then(template => new Vue(Object.assign({}, config, {
+	        var result = extendClass(target, (data) => {
+	            config.setVueInstance(data.zyx123values, config.html.then(template => new Vue(Object.assign({}, config, {
 	                el: config.el,
-	                data: instance.$vuedata,
+	                data: data,
 	                template: template
 	            }))));
 	        });
