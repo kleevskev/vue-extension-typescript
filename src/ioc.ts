@@ -1,5 +1,4 @@
 import { createDecoratorWithOption, decorateStorage } from './decorator';
-
 const StoageMetadataKey = "StoageMetadataKey";
 const StoageCallbackIOCFactoryKey = "StoageCallbackIOCFactoryKey";
 const StorageConcreteClassKey = "StorageConcreteClassKey";
