@@ -1,5 +1,4 @@
 import { View, Component, start, data, methods, computed, props, event } from '../../dist/vue-extension-typescript';
-declare let Vue: any;
 
 class Base {}
 
@@ -24,7 +23,6 @@ class TextBox {
 }
 
 @View({
-    el: "#app",
     html: Promise.resolve(`
     <div>
         <div>message = {{ message }} et message2 = {{ message2 }}</div>
@@ -45,4 +43,4 @@ class Test extends Base {
     }
 }
 
-start(Test);
+start(Test, "#app");

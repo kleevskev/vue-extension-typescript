@@ -85,11 +85,164 @@ __MODE__ = undefined;
 		return define; 
 	})();
 
+	(function (factory) {
+	    if (typeof module === "object" && typeof module.exports === "object") {
+	        var v = factory(require, exports);
+	        if (v !== undefined) module.exports = v;
+	    }
+	    else if (typeof define === "function" && define.amd) {
+	        define('lib/decorator.js', ["require", "exports"], factory);
+	    }
+	})(function (require, exports) {
+	    "use strict";
+	    Object.defineProperty(exports, "__esModule", { value: true });
+	    function createDecoratorWithDefaultOption(callback) {
+	        return (defaultOption) => {
+	            var result = (target, key, desc) => {
+	                if (target.constructor.prototype !== target) {
+	                    return callback.bind(null, target);
+	                }
+	                else {
+	                    return callback(defaultOption(target, key, desc), target, key, desc);
+	                }
+	            };
+	            return result;
+	        };
+	    }
+	    exports.createDecoratorWithDefaultOption = createDecoratorWithDefaultOption;
+	    function createDecoratorWithOption(callback) {
+	        return (options) => {
+	            return callback.bind(null, options);
+	        };
+	    }
+	    exports.createDecoratorWithOption = createDecoratorWithOption;
+	    function createDecorator(callback) {
+	        return callback;
+	    }
+	    exports.createDecorator = createDecorator;
+	    function decorateStorage(target, key) {
+	        var storage;
+	        var trgt = target;
+	        key = key || "$root$";
+	        trgt.$$decorateStorage$$ = trgt.$$decorateStorage$$ || {};
+	        storage = (trgt.$$decorateStorage$$[key] = trgt.$$decorateStorage$$[key] || {});
+	        return {
+	            get: (key) => {
+	                var obj = storage[key] = storage[key] || {};
+	                return {
+	                    set: (key, value) => {
+	                        obj[key] = obj[key] || {};
+	                        obj[key] = value;
+	                    },
+	                    get: (key) => obj && obj[key],
+	                    getAll: () => obj
+	                };
+	            }
+	        };
+	    }
+	    exports.decorateStorage = decorateStorage;
+	});
+	
+	(function (factory) {
+	    if (typeof module === "object" && typeof module.exports === "object") {
+	        var v = factory(require, exports);
+	        if (v !== undefined) module.exports = v;
+	    }
+	    else if (typeof define === "function" && define.amd) {
+	        define('lib/ioc.js', ["require", "exports", "./decorator"], factory);
+	    }
+	})(function (require, exports) {
+	    "use strict";
+	    Object.defineProperty(exports, "__esModule", { value: true });
+	    const decorator_1 = require("./decorator");
+	    const StoageMetadataKey = "StoageMetadataKey";
+	    const StoageCallbackIOCFactoryKey = "StoageCallbackIOCFactoryKey";
+	    const StorageConcreteClassKey = "StorageConcreteClassKey";
+	    var context = window;
+	    context.Reflect = context.Reflect || {};
+	    context.Reflect.metadata = (k, v) => {
+	        return function (target, key) {
+	            decorator_1.decorateStorage(target, key).get(StoageMetadataKey).set(k, v);
+	        };
+	    };
+	    class Container {
+	        createService(target, context, contextCreator) {
+	            var trgt = target;
+	            var builder = decorator_1.decorateStorage(target).get(StoageCallbackIOCFactoryKey).get("builder");
+	            return builder && builder(this, trgt, context || {}, contextCreator || {}) || new trgt();
+	        }
+	    }
+	    exports.Container = Container;
+	    var factoryDecorator = decorator_1.createDecoratorWithOption((option, target) => {
+	        decorator_1.decorateStorage(target).get(StoageCallbackIOCFactoryKey).set("builder", option);
+	    });
+	    var injectorDecorator = decorator_1.createDecoratorWithOption((option, target) => {
+	        factoryDecorator((container, targetKey, context, contextCreator) => {
+	            var param = (decorator_1.decorateStorage(target).get(StoageMetadataKey).get("design:paramtypes") || [])
+	                .map((type) => option.callback(container, type, context, contextCreator));
+	            var instance = target ?
+	                (param.length <= 0 ?
+	                    new target() :
+	                    new (target.bind.apply(target, [null].concat(param)))()) : undefined;
+	            return instance;
+	        })(option.key, null, null);
+	    });
+	    var serviceDecorator = (options) => (target) => {
+	        decorator_1.decorateStorage(options.key).get(StorageConcreteClassKey).set("value", target);
+	        injectorDecorator({
+	            key: options.key,
+	            callback: (container, type, context) => {
+	                context.created = context.created || [];
+	                var result = context.created.filter(_ => _.key === type).map(_ => _.value)[0];
+	                if (!result) {
+	                    result = container.createService(type, context);
+	                    context.created.push({ key: type, value: result });
+	                }
+	                return result;
+	            }
+	        })(target, null, null);
+	    };
+	    exports.Service = serviceDecorator;
+	    var getConcreteClass = (target) => {
+	        return target && decorator_1.decorateStorage(target).get(StorageConcreteClassKey).get("value");
+	    };
+	    exports.getConcreteClass = getConcreteClass;
+	});
+	
+	(function (factory) {
+	    if (typeof module === "object" && typeof module.exports === "object") {
+	        var v = factory(require, exports);
+	        if (v !== undefined) module.exports = v;
+	    }
+	    else if (typeof define === "function" && define.amd) {
+	        define('lib/mixin.js', ["require", "exports"], factory);
+	    }
+	})(function (require, exports) {
+	    "use strict";
+	    Object.defineProperty(exports, "__esModule", { value: true });
+	    function extendClass(target, before, after) {
+	        var result = (new Function('constructor', `return function ${target.name}() { constructor(this, arguments); };`))(function (instance, args) {
+	            before && before(this);
+	            var instance = target.apply(instance, args) || instance;
+	            after && after(instance);
+	            return instance;
+	        });
+	        Object.setPrototypeOf(result, target);
+	        function __() { this.constructor = result; }
+	        result.prototype = target === null ? Object.create(target) : (__.prototype = target.prototype, new __());
+	        return result;
+	    }
+	    exports.extendClass = extendClass;
+	});
+	
 	var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
 	    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
 	    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
 	    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
 	    return c > 3 && r && Object.defineProperty(target, key, r), r;
+	};
+	var __metadata = (this && this.__metadata) || function (k, v) {
+	    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 	};
 	(function (factory) {
 	    if (typeof module === "object" && typeof module.exports === "object") {
@@ -97,258 +250,209 @@ __MODE__ = undefined;
 	        if (v !== undefined) module.exports = v;
 	    }
 	    else if (typeof define === "function" && define.amd) {
-	        define('lib/index.js', ["require", "exports"], factory);
+	        define('lib/vue.extend.js', ["require", "exports", "./ioc", "./mixin", "./decorator"], factory);
 	    }
 	})(function (require, exports) {
 	    "use strict";
 	    Object.defineProperty(exports, "__esModule", { value: true });
-	    var context = window;
-	    context.Reflect = context.Reflect || {};
-	    context.Reflect.metadata = (k, v) => {
-	        return function (target) {
-	            target.$$ioc = target.$$ioc || {};
-	            target.$$ioc.metadata = {};
-	            target.$$ioc.metadata[k] = v;
-	        };
+	    const ioc_1 = require("./ioc");
+	    exports.Service = ioc_1.Service;
+	    const mixin_1 = require("./mixin");
+	    const decorator_1 = require("./decorator");
+	    var Vue;
+	    var VueRouter;
+	    var StorageVueJsOptionsComputedKey = "StorageVueJsOptionsComputedKey";
+	    var StorageVueJsOptionsWatchKey = "StorageVueJsOptionsWatchKey";
+	    var StorageVueJsOptionsMethodKey = "StorageVueJsOptionsMethodKey";
+	    var StorageVueJsOptionsPropKey = "StorageVueJsOptionsPropKey";
+	    var StorageVueJsVueContextGetterSetter = "StorageVueJsVueContextGetterSetter";
+	    var StorageVueJsComponent = "StorageVueJsComponent";
+	    var StorageVueJsRoutes = "StorageVueJsRoutes";
+	    var setDefaultConfig = (target) => {
+	        for (var property in target.prototype) {
+	            ((target, key) => {
+	                if (!key.startsWith("_") && !key.startsWith("$") &&
+	                    !decorator_1.decorateStorage(target).get(StorageVueJsOptionsComputedKey).get(key) &&
+	                    !decorator_1.decorateStorage(target).get(StorageVueJsOptionsPropKey).get(key)) {
+	                    var descriptor = Object.getOwnPropertyDescriptor(target, key);
+	                    if (descriptor.get && descriptor.set) {
+	                        dataDecorator(target, key, descriptor);
+	                    }
+	                    else if (descriptor.set) {
+	                        propDecorator(target, key, descriptor);
+	                    }
+	                    else if (descriptor.get) {
+	                        computedDecorator(target, key);
+	                    }
+	                    else if (typeof (descriptor.value) === "function") {
+	                        methodDecorator(target, key);
+	                    }
+	                }
+	            })(target.prototype, property);
+	        }
 	    };
+	    var GetVueConfig = (target, html) => {
+	        setDefaultConfig(target);
+	        return html.then(html => ({
+	            computed: decorator_1.decorateStorage(target.prototype).get(StorageVueJsOptionsComputedKey).getAll(),
+	            watch: decorator_1.decorateStorage(target.prototype).get(StorageVueJsOptionsWatchKey).getAll(),
+	            methods: decorator_1.decorateStorage(target.prototype).get(StorageVueJsOptionsMethodKey).getAll(),
+	            props: decorator_1.decorateStorage(target.prototype).get(StorageVueJsOptionsPropKey).getAll(),
+	            template: html
+	        }));
+	    };
+	    var extendClass = (target, init) => mixin_1.extendClass(target, (instance) => {
+	        decorator_1.decorateStorage(target.prototype).get(StorageVueJsVueContextGetterSetter).set("getter", (instance) => {
+	            return instance.$$vueContext$$;
+	        });
+	    }, init);
 	    var explorePrototype = (target, callback) => {
 	        var classTarget = Object.getPrototypeOf(target);
-	        while (classTarget && classTarget.constructor !== classTarget) {
-	            callback(classTarget.constructor);
+	        while (classTarget && classTarget.constructor !== classTarget && classTarget.name) {
+	            callback(classTarget);
 	            classTarget = Object.getPrototypeOf(classTarget);
 	        }
 	    };
-	    class Container {
-	        createService(target, context) {
-	            var trgt = target;
-	            return trgt.$$ioc && trgt.$$ioc.builder && trgt.$$ioc.builder(this, trgt, context || {}) || new trgt();
-	        }
-	    }
-	    var factoryDecorator = (callback) => (target) => {
-	        target.$$ioc = target.$$ioc || {};
-	        target.$$ioc.builder = callback;
-	    };
-	    var injectorDecorator = (options) => (target) => {
-	        return factoryDecorator((container, key, context) => {
-	            var trgt = target;
-	            var param = (trgt.$$ioc && trgt.$$ioc.metadata && trgt.$$ioc.metadata["design:paramtypes"] || [])
-	                .map((type) => options.callback(container, type, context));
-	            var instance = trgt ?
-	                (param.length <= 0 ?
-	                    new trgt() :
-	                    new (trgt.bind.apply(trgt, [null].concat(param)))()) : undefined;
-	            return instance;
-	        })(options.key);
-	    };
-	    var serviceDecorator = (options) => injectorDecorator({
-	        key: options.key,
-	        callback: (container, type, context) => {
-	            context.created = context.created || [];
-	            var result = context.created.filter(_ => _.key === type).map(_ => _.value)[0];
-	            if (!result) {
-	                result = container.createService(type, context);
-	                context.created.push({ key: type, value: result });
-	            }
-	            return result;
-	        }
+	    var createConfigForVueRouter = (routes) => routes && routes.map(_ => {
+	        var concrete = ioc_1.getConcreteClass(_.component);
+	        var component = decorator_1.decorateStorage(concrete).get(StorageVueJsComponent).get("value");
+	        var childRoutes = decorator_1.decorateStorage(concrete).get(StorageVueJsRoutes).get("value");
+	        _.component = component || _.component;
+	        _.children = createConfigForVueRouter(childRoutes || _.children || []);
+	        return _;
 	    });
-	    exports.Service = serviceDecorator;
-	    var dataDecorator = (targetPrototype, key, desc) => {
-	        targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {};
-	        targetPrototype.$$vuejsext.computed = targetPrototype.$$vuejsext.computed || {};
-	        targetPrototype.$$vuejsext.computed[key] = {
+	    var dataDecorator = decorator_1.createDecoratorWithDefaultOption((options, target, key) => {
+	        decorator_1.decorateStorage(target).get(StorageVueJsOptionsComputedKey).set(options, {
 	            get: function () {
 	                return this.$data.zyx123values[key];
 	            },
 	            set: function (value) {
 	                this.$data.zyx123values[key] = value;
 	            }
-	        };
-	        decorate(targetPrototype, key);
-	    };
+	        });
+	    })((target, key) => key);
 	    exports.data = dataDecorator;
-	    var decorate = (targetPrototype, key) => {
-	        targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {};
-	        targetPrototype.$$vuejsext.decorate = targetPrototype.$$vuejsext.decorate || {};
-	        targetPrototype.$$vuejsext.decorate[key] = true;
-	    };
-	    var isDecorate = (targetPrototype, key) => targetPrototype.$$vuejsext && targetPrototype.$$vuejsext.decorate && targetPrototype.$$vuejsext.decorate[key];
-	    var beforeMount = (callback) => (targetPrototype) => {
-	        targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {};
-	        targetPrototype.$$vuejsext.beforeMount = targetPrototype.$$vuejsext.beforeMount || [];
-	        targetPrototype.$$vuejsext.beforeMount.push(callback);
-	    };
-	    var computedDecorator = (targetPrototype, key) => {
-	        decorate(targetPrototype, key);
-	        targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {};
-	        targetPrototype.$$vuejsext.computed = targetPrototype.$$vuejsext.computed || {};
-	        targetPrototype.$$vuejsext.computed[key] = function () {
+	    var computedDecorator = decorator_1.createDecoratorWithDefaultOption((options, target, key) => {
+	        decorator_1.decorateStorage(target).get(StorageVueJsOptionsComputedKey).set(options, function () {
 	            return this.$data.zyx123values[key];
-	        };
-	    };
+	        });
+	    })((target, key) => key);
 	    exports.computed = computedDecorator;
-	    var watchDecorator = (name) => (targetPrototype, key, desc) => {
-	        decorate(targetPrototype, key);
-	        targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {};
-	        targetPrototype.$$vuejsext.watch = targetPrototype.$$vuejsext.watch || {};
-	        targetPrototype.$$vuejsext.watch[name] = function () {
-	            this.$data.zyx123values[key]();
-	        };
-	    };
-	    exports.watch = watchDecorator;
-	    var methodDecorator = (targetPrototype, key, desc) => {
-	        decorate(targetPrototype, key);
-	        targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {};
-	        targetPrototype.$$vuejsext.methods = targetPrototype.$$vuejsext.methods || {};
-	        targetPrototype.$$vuejsext.methods[key] = function () {
+	    var watchDecorator = decorator_1.createDecoratorWithDefaultOption((options, target, key) => {
+	        decorator_1.decorateStorage(target).get(StorageVueJsOptionsWatchKey).set(options, function () {
 	            this.$data.zyx123values[key].apply(this.$data.zyx123values, arguments);
-	        };
-	    };
+	        });
+	    })((target, key) => key);
+	    exports.watch = watchDecorator;
+	    var methodDecorator = decorator_1.createDecoratorWithDefaultOption((options, target, key) => {
+	        decorator_1.decorateStorage(target).get(StorageVueJsOptionsMethodKey).set(options, function () {
+	            return this.$data.zyx123values[key].apply(this.$data.zyx123values, arguments);
+	        });
+	    })((target, key) => key);
 	    exports.methods = methodDecorator;
-	    var eventDecorator = (targetPrototype, key, desc) => {
-	        decorate(targetPrototype, key);
-	        methodDecorator(targetPrototype, key, desc);
+	    var eventDecorator = decorator_1.createDecoratorWithDefaultOption((options, target, key, desc) => {
 	        var _super = desc.value;
 	        desc.value = function () {
 	            var result = _super.apply(this, arguments);
-	            this.$vuejs && this.$vuejs.then(vuejs => vuejs.$emit(key, result));
+	            var getter = decorator_1.decorateStorage(target).get(StorageVueJsVueContextGetterSetter).get("getter");
+	            var vueContext = getter && getter(this);
+	            vueContext && vueContext.$emit(key, result);
 	            return result;
 	        };
-	    };
+	    })((target, key) => key);
 	    exports.event = eventDecorator;
-	    var propDecorator = (targetPrototype, key, desc) => {
-	        targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {};
-	        targetPrototype.$$vuejsext.watch = targetPrototype.$$vuejsext.watch || {};
-	        targetPrototype.$$vuejsext.watch[key] = function () {
-	            this.$data.zyx123values[key] = this[key];
-	        };
-	        decorate(targetPrototype, key);
-	        targetPrototype.$$vuejsext = targetPrototype.$$vuejsext || {};
-	        targetPrototype.$$vuejsext.props = targetPrototype.$$vuejsext.props || {};
-	        targetPrototype.$$vuejsext.props[key] = {};
-	    };
+	    var propDecorator = decorator_1.createDecoratorWithDefaultOption((options, target, key) => {
+	        decorator_1.decorateStorage(target).get(StorageVueJsOptionsPropKey).set(options, {});
+	        decorator_1.decorateStorage(target).get(StorageVueJsOptionsWatchKey).set(options, {
+	            immediate: true,
+	            handler() {
+	                this.$data.zyx123values[key] = this[options];
+	            },
+	        });
+	    })((target, key) => key);
 	    exports.props = propDecorator;
-	    var setDefaultConfig = (target) => {
-	        var targetPrototype = target.prototype;
-	        Object.keys(targetPrototype)
-	            .filter(key => key.indexOf("$") !== 0)
-	            .forEach(key => {
-	            if (!isDecorate(targetPrototype, key)) {
-	                var descriptor = Object.getOwnPropertyDescriptor(targetPrototype, key);
-	                if (descriptor.get && descriptor.set) {
-	                    dataDecorator(targetPrototype, key, descriptor);
-	                }
-	                else if (descriptor.set) {
-	                    propDecorator(targetPrototype, key, descriptor);
-	                }
-	                else if (descriptor.get) {
-	                    computedDecorator(targetPrototype, key);
-	                }
+	    var routeParamDecorator = decorator_1.createDecoratorWithDefaultOption((options, target, key) => {
+	        decorator_1.decorateStorage(target).get(StorageVueJsOptionsWatchKey).set(`$route.params.${options}`, {
+	            immediate: true,
+	            handler() {
+	                this.$data.zyx123values[key] = this[options];
 	            }
 	        });
-	    };
-	    var GetVueConfig = (options) => (target) => {
-	        setDefaultConfig(target);
-	        target.prototype.$$vuejsext = target.prototype.$$vuejsext || {};
-	        var data = target.prototype.$$vuejsext.data || {};
-	        var computed = target.prototype.$$vuejsext.computed || {};
-	        var watch = target.prototype.$$vuejsext.watch || {};
-	        var props = target.prototype.$$vuejsext.props || {};
-	        var methods = target.prototype.$$vuejsext.methods || {};
-	        var html = options.html;
-	        var el = options.el;
-	        var inits = target.prototype.$$vuejsext.init || [];
-	        var beforeMounts = target.prototype.$$vuejsext.beforeMount || [];
-	        var initValues = (d) => inits.forEach((fn) => fn(d));
-	        var beforeMount = function () { beforeMounts.forEach((fn) => fn(this)); };
-	        return {
-	            data: data,
-	            computed: computed,
-	            watch: watch,
-	            props: props,
-	            methods: methods,
-	            html: html,
-	            el: el,
-	            initValues: initValues,
-	            beforeMount: beforeMount,
-	            setVueInstance: (instance, vi) => instance.$vuejs = vi
+	    })((target, key) => key);
+	    exports.routeParam = routeParamDecorator;
+	    var refDecorator = decorator_1.createDecoratorWithDefaultOption((options, target, key, desc) => {
+	        desc = desc || {};
+	        desc.get = () => {
+	            var getter = decorator_1.decorateStorage(target).get(StorageVueJsVueContextGetterSetter).get("getter");
+	            var vueContext = getter && getter(this);
+	            return vueContext && vueContext.$refs[options];
 	        };
-	    };
-	    var vueInjectorDecorator = (target) => explorePrototype(target, (prototypeClass) => {
-	        injectorDecorator({
-	            key: prototypeClass,
-	            callback: (container, type, context) => {
-	                context.created = context.created || [];
-	                var result = context.created.filter(_ => _.key === type).map(_ => _.value)[0];
-	                if (!result) {
-	                    if (type && type.$$vuejs && type.$$vuejs.isComponent) {
-	                    }
-	                    else if (type && type.$$vuejs && type.$$vuejs.isVue) {
-	                        result = container.createService(type, context);
-	                    }
-	                    else {
-	                        result = container.createService(type, context);
-	                        context.created.push({ key: type, value: result });
-	                    }
-	                }
-	                return result;
-	            }
-	        })(target);
+	        return desc;
+	    })((target, key) => key);
+	    exports.ref = refDecorator;
+	    var vueServiceDecorator = (target) => explorePrototype(target, (prototypeClass) => {
+	        ioc_1.Service({ key: prototypeClass })(target);
 	    });
-	    var extendClass = (target, init) => {
-	        var result = (new Function('constructor', `return function ${target.name}() { constructor(this, arguments); };`))(function (instance, args) {
-	            var d = { zyx123values: instance };
-	            instance.$vuedata = d;
-	            var instance = target.apply(instance, args) || instance;
-	            init(d);
-	            return instance;
-	        });
-	        Object.setPrototypeOf(result, target);
-	        function __() { this.constructor = result; }
-	        result.prototype = target === null ? Object.create(target) : (__.prototype = target.prototype, new __());
-	        return result;
-	    };
 	    var ComponentDecorator = (options) => (target) => {
-	        target.$$vuejs = target.$$vuejs || {};
-	        target.$$vuejs.isComponent = true;
-	        var result = extendClass(target, (data) => { });
-	        vueInjectorDecorator(result);
-	        var config = GetVueConfig(options)(target);
-	        delete config.el;
-	        Vue.component(options.name, (resolve) => {
-	            config.html.then(template => resolve(Object.assign({}, config, {
-	                template: template,
-	                data: function () {
-	                    var instance = container.createService(result, containerContext);
-	                    config.setVueInstance(instance, Promise.resolve(this));
-	                    return instance.$vuedata;
-	                }
-	            })));
+	        var result = extendClass(target);
+	        decorator_1.decorateStorage(result).get(StorageVueJsRoutes).set("value", options.routes);
+	        vueServiceDecorator(result);
+	        decorator_1.decorateStorage(target.prototype).get(StorageVueJsVueContextGetterSetter).set("getter", (instance) => {
+	            return instance.$$vueContext$$;
 	        });
+	        decorator_1.decorateStorage(result).get(StorageVueJsVueContextGetterSetter).set("getter", (instance) => {
+	            var getter = decorator_1.decorateStorage(target.prototype).get(StorageVueJsVueContextGetterSetter).get("getter");
+	            return getter && getter(instance);
+	        });
+	        decorator_1.decorateStorage(result).get(StorageVueJsComponent).set("value", Vue.component(`${options.name}`, (resolve) => {
+	            GetVueConfig(target, options.html).then(config => {
+	                resolve(Object.assign({}, config, {
+	                    data: function () {
+	                        var instance = container.createService(result, containerContext);
+	                        instance.$$vueContext$$ = this;
+	                        return {
+	                            zyx123values: instance
+	                        };
+	                    }
+	                }));
+	            });
+	        }));
 	        return result;
 	    };
 	    exports.Component = ComponentDecorator;
 	    var VueDecorator = (options) => (target) => {
-	        target.$$vuejs = target.$$vuejs || {};
-	        target.$$vuejs.isVue = true;
 	        var result = extendClass(target, (data) => {
-	            config.setVueInstance(data.zyx123values, config.html.then(template => new Vue(Object.assign({}, config, {
-	                el: config.el,
-	                data: data,
-	                template: template
-	            }))));
+	            var router = new VueRouter({
+	                mode: 'history',
+	                routes: createConfigForVueRouter(options.routes)
+	            });
+	            GetVueConfig(target, options.html).then(config => {
+	                data.$$vueContext$$ = new Vue(Object.assign({}, config, {
+	                    data: {
+	                        zyx123values: data
+	                    },
+	                    router: router
+	                }));
+	            });
 	        });
-	        vueInjectorDecorator(result);
-	        var config = GetVueConfig(options)(target);
+	        decorator_1.decorateStorage(target.prototype).get(StorageVueJsVueContextGetterSetter).set("getter", (instance) => {
+	            return instance.$$vueContext$$;
+	        });
+	        decorator_1.decorateStorage(result).get(StorageVueJsVueContextGetterSetter).set("getter", (instance) => {
+	            var getter = decorator_1.decorateStorage(target.prototype).get(StorageVueJsVueContextGetterSetter).get("getter");
+	            return getter && getter(instance);
+	        });
+	        decorator_1.decorateStorage(result).get(StorageVueJsRoutes).set("value", options.routes);
 	        return result;
 	    };
 	    exports.View = VueDecorator;
-	    var container = new Container();
+	    var container = new ioc_1.Container();
 	    var containerContext = {};
+	    var rootView;
 	    var DirectiveDecorator = (options) => target => {
-	        vueInjectorDecorator(target);
+	        ioc_1.Service({ key: target })(target);
 	        var instance = container.createService(target, containerContext);
-	        Vue.directive(name, {
+	        Vue.directive(options.name, {
 	            bind: instance.bind && instance.bind.bind(instance),
 	            inserted: instance.inserted && instance.inserted.bind(instance),
 	            update: instance.update && instance.update.bind(instance),
@@ -360,6 +464,9 @@ __MODE__ = undefined;
 	    class IServiceProvider {
 	    }
 	    exports.IServiceProvider = IServiceProvider;
+	    class IRouterService {
+	    }
+	    exports.IRouterService = IRouterService;
 	    let ServiceProvider = class ServiceProvider extends IServiceProvider {
 	        createService(target) {
 	            return container.createService(target, containerContext);
@@ -370,12 +477,60 @@ __MODE__ = undefined;
 	        }
 	    };
 	    ServiceProvider = __decorate([
-	        serviceDecorator({ key: IServiceProvider })
+	        ioc_1.Service({ key: IServiceProvider })
 	    ], ServiceProvider);
-	    function start(target) {
-	        container.createService(target, containerContext);
+	    let RouterService = class RouterService extends IRouterService {
+	        constructor() {
+	            super();
+	        }
+	        trigger(href, replace) {
+	            if (replace) {
+	                rootView.$router.replace(href);
+	            }
+	            else {
+	                rootView.$router.push(href);
+	            }
+	        }
+	    };
+	    RouterService = __decorate([
+	        ioc_1.Service({ key: IRouterService }),
+	        __metadata("design:paramtypes", [])
+	    ], RouterService);
+	    function start(target, selector) {
+	        var startup = container.createService(target, containerContext);
+	        var getter = decorator_1.decorateStorage(target).get(StorageVueJsVueContextGetterSetter).get("getter");
+	        setTimeout(() => {
+	            rootView = getter && getter(startup);
+	            rootView.$mount(selector);
+	        });
 	    }
 	    exports.start = start;
+	    exports.Plugin = (router) => ({
+	        install: (v, options) => {
+	            Vue = v;
+	            VueRouter = router;
+	        }
+	    });
+	    if (window.Vue && window.VueRouter) {
+	        Vue.use(exports.Plugin(VueRouter));
+	    }
+	});
+	
+	(function (factory) {
+	    if (typeof module === "object" && typeof module.exports === "object") {
+	        var v = factory(require, exports);
+	        if (v !== undefined) module.exports = v;
+	    }
+	    else if (typeof define === "function" && define.amd) {
+	        define('lib/index.js', ["require", "exports", "vue.extend"], factory);
+	    }
+	})(function (require, exports) {
+	    "use strict";
+	    function __export(m) {
+	        for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
+	    }
+	    Object.defineProperty(exports, "__esModule", { value: true });
+	    __export(require("vue.extend"));
 	});
 	
 
