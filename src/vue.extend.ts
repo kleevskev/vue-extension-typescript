@@ -124,7 +124,7 @@ var routeParamDecorator = createDecoratorWithDefaultOption<string>((options, tar
     decorateStorage(target).get(StorageVueJsOptionsWatchKey).set(`$route.params.${options}`, {
         immediate: true,
         handler() {
-            this.$data.zyx123values[key] = this[options];
+            this.$data.zyx123values[key] = this.$route.params[options];
         }
     });
 })((target, key) => key);
